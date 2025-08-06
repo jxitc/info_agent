@@ -84,3 +84,8 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Development notes and local files
+tomorrow.md
+notes/
+*.local.md
