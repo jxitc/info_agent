@@ -73,6 +73,7 @@ More advanced processing is on M1 and later:
 More advanced processing is on M1 and later:
 - **RESTful API** (M1): Similar to CLI interface, provide RESTful API to allow access from different endpoints
 - **Query History** (M1): Track and learn from user query patterns
+- **Proactive event reminder** (M2): instead of reactively answer users' question, the system should be able to setup the proactive reminder at proper time point
 
 
 ### Scalability (M1)
