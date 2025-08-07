@@ -19,6 +19,7 @@ from info_agent.cli.validators import (
     validate_text_input, validate_search_query, validate_limit
 )
 from info_agent.cli.help import add_help_commands
+from info_agent.core.repository import get_memory_service, RepositoryError
 
 
 # Global context object for sharing state between commands
@@ -28,6 +29,7 @@ class InfoAgentContext:
     def __init__(self):
         self.verbose = False
         self.logger = None
+        self.memory_service = None
     
     def setup_logging(self, verbose: bool = False):
         """Setup logging based on verbosity level."""
@@ -35,6 +37,15 @@ class InfoAgentContext:
         setup_logging(log_level=log_level)
         self.logger = get_logger(__name__)
         self.verbose = verbose
+        
+        # Initialize memory service
+        try:
+            self.memory_service = get_memory_service()
+            if verbose:
+                self.logger.debug("Memory service initialized")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize memory service: {e}")
+            self.memory_service = None
 
 
 # Main CLI group
@@ -80,13 +91,41 @@ def add(ctx, text: str):
         validated_text = validate_text_input(text)
         logger.info(f"Adding new memory with {len(validated_text)} characters")
         
-        # TODO: Implement memory creation logic
+        # Check if memory service is available
+        if not ctx.obj.memory_service:
+            click.echo("❌ Database service not available")
+            click.echo("💡 Try running: python -m info_agent.core.migrations to initialize database")
+            return
+        
+        # Create memory
         click.echo("🔄 Processing memory...")
         click.echo(f"📝 Text: {validated_text[:100]}{'...' if len(validated_text) > 100 else ''}")
         
-        # Placeholder implementation
-        click.echo("❌ Memory creation not yet implemented")
-        click.echo("💡 This will be implemented in tasks 4.1 and 3.2")
+        try:
+            # Add memory using service (with simple mocked dynamic fields)
+            memory = ctx.obj.memory_service.add_memory(
+                content=validated_text,
+                title=None  # Auto-generate title
+            )
+            
+            # Mock some simple dynamic fields for testing
+            if memory:
+                memory.dynamic_fields = {
+                    "category": "general",
+                    "word_count": len(validated_text.split()),
+                    "status": "created"
+                }
+                # Update with mocked fields
+                ctx.obj.memory_service.update_memory(memory)
+            
+            click.echo("✅ Memory created successfully!")
+            click.echo(f"📋 Memory ID: {memory.id}")
+            click.echo(f"🏷️  Title: {memory.title}")
+            click.echo(f"📊 Word count: {memory.word_count}")
+            
+        except RepositoryError as e:
+            click.echo(f"❌ Failed to create memory: {e}")
+            logger.error(f"Memory creation failed: {e}")
         
     except click.BadParameter as e:
         logger.error(f"Input validation error: {e}")
@@ -147,13 +186,44 @@ def list(ctx, limit: int):
     logger = ctx.obj.logger
     logger.info(f"Listing recent memories (limit: {limit})")
     
-    # TODO: Implement list logic
-    click.echo(f"📋 Recent memories (limit: {limit}):")
+    # Check if memory service is available
+    if not ctx.obj.memory_service:
+        click.echo("❌ Database service not available")
+        return
     
-    
-    # Placeholder implementation
-    click.echo("❌ Memory listing not yet implemented")
-    click.echo("💡 This will be implemented in tasks 4.1 and 2.1")
+    try:
+        # Get recent memories
+        memories = ctx.obj.memory_service.list_recent_memories(limit=limit)
+        
+        if not memories:
+            click.echo("📋 No memories found")
+            click.echo("💡 Add your first memory with: info-agent add \"your text here\"")
+            return
+        
+        click.echo(f"📋 Recent memories ({len(memories)} found):")
+        click.echo()
+        
+        for memory in memories:
+            # Simple display format
+            preview = memory.get_preview(80)
+            created_date = memory.created_at.strftime("%Y-%m-%d %H:%M") if memory.created_at else "unknown"
+            
+            click.echo(f"🆔 ID: {memory.id}")
+            click.echo(f"🏷️  Title: {memory.title}")
+            click.echo(f"📝 Preview: {preview}")
+            click.echo(f"📅 Created: {created_date}")
+            click.echo(f"📊 Words: {memory.word_count}")
+            
+            # Show simple dynamic fields if available
+            if memory.dynamic_fields:
+                category = memory.dynamic_fields.get('category', 'N/A')
+                click.echo(f"📂 Category: {category}")
+            
+            click.echo("-" * 50)
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to list memories: {e}")
+        logger.error(f"Memory listing failed: {e}")
 
 
 @cli.command()
@@ -172,12 +242,96 @@ def show(ctx, memory_id: int):
     logger = ctx.obj.logger
     logger.info(f"Showing memory ID: {memory_id}")
     
-    # TODO: Implement show logic
-    click.echo(f"📄 Memory Details (ID: {memory_id}):")
+    # Check if memory service is available
+    if not ctx.obj.memory_service:
+        click.echo("❌ Database service not available")
+        return
     
-    # Placeholder implementation
-    click.echo("❌ Memory display not yet implemented")
-    click.echo("💡 This will be implemented in tasks 4.1 and 2.1")
+    try:
+        # Get memory by ID
+        memory = ctx.obj.memory_service.get_memory(memory_id)
+        
+        if not memory:
+            click.echo(f"❌ Memory with ID {memory_id} not found")
+            return
+        
+        # Display memory details
+        click.echo(f"📄 Memory Details (ID: {memory_id})")
+        click.echo("=" * 60)
+        click.echo()
+        
+        click.echo(f"🏷️  Title: {memory.title}")
+        click.echo(f"📝 Content:")
+        click.echo(f"   {memory.content}")
+        click.echo()
+        
+        # Metadata
+        created_date = memory.created_at.strftime("%Y-%m-%d %H:%M:%S") if memory.created_at else "unknown"
+        updated_date = memory.updated_at.strftime("%Y-%m-%d %H:%M:%S") if memory.updated_at else "unknown"
+        
+        click.echo(f"📊 Statistics:")
+        click.echo(f"   Word count: {memory.word_count}")
+        click.echo(f"   Content hash: {memory.content_hash[:16]}...")
+        click.echo(f"   Version: {memory.version}")
+        click.echo()
+        
+        click.echo(f"📅 Timestamps:")
+        click.echo(f"   Created: {created_date}")
+        click.echo(f"   Updated: {updated_date}")
+        
+        # Dynamic fields (mocked data)
+        if memory.dynamic_fields:
+            click.echo()
+            click.echo(f"🔧 Dynamic Fields:")
+            for key, value in memory.dynamic_fields.items():
+                click.echo(f"   {key}: {value}")
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to show memory: {e}")
+        logger.error(f"Memory show failed: {e}")
+
+
+@cli.command()
+@click.argument('memory_id', required=True, type=MEMORY_ID)
+@click.confirmation_option(prompt='Are you sure you want to delete this memory?')
+@click.pass_context
+def delete(ctx, memory_id: int):
+    """
+    Delete a memory by ID.
+    
+    MEMORY_ID: The ID of the memory to delete.
+    
+    Examples:
+    
+        info-agent delete 123
+    """
+    logger = ctx.obj.logger
+    logger.info(f"Deleting memory ID: {memory_id}")
+    
+    # Check if memory service is available
+    if not ctx.obj.memory_service:
+        click.echo("❌ Database service not available")
+        return
+    
+    try:
+        # Check if memory exists first
+        memory = ctx.obj.memory_service.get_memory(memory_id)
+        if not memory:
+            click.echo(f"❌ Memory with ID {memory_id} not found")
+            return
+        
+        # Delete the memory
+        success = ctx.obj.memory_service.delete_memory(memory_id)
+        
+        if success:
+            click.echo(f"✅ Memory {memory_id} deleted successfully")
+            click.echo(f"🏷️  Title: {memory.title}")
+        else:
+            click.echo(f"❌ Failed to delete memory {memory_id}")
+        
+    except Exception as e:
+        click.echo(f"❌ Failed to delete memory: {e}")
+        logger.error(f"Memory deletion failed: {e}")
 
 
 @cli.command()
@@ -196,10 +350,6 @@ def status(ctx):
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     click.echo(f"🐍 Python: {python_version}")
     
-    # Check configuration
-    config_status = "✅ Loaded" if ctx.obj.config_path else "⚠️  Using defaults"
-    click.echo(f"⚙️  Configuration: {config_status}")
-    
     # Check data directory
     data_dir = os.path.expanduser("~/.info_agent/data")
     if os.path.exists(data_dir):
@@ -207,13 +357,38 @@ def status(ctx):
     else:
         click.echo(f"📁 Data directory: ❌ Not found ({data_dir})")
     
-    # Check dependencies (placeholder)
-    click.echo("📦 Dependencies:")
-    click.echo("   • Database: ❌ Not connected")
-    click.echo("   • Vector store: ❌ Not connected") 
-    click.echo("   • AI services: ❌ Not connected")
+    # Check database connection and statistics
+    if ctx.obj.memory_service:
+        try:
+            stats = ctx.obj.memory_service.get_service_statistics()
+            total_memories = stats.get('total_memories', 0)
+            
+            click.echo("📦 Services:")
+            click.echo(f"   • Database: ✅ Connected")
+            click.echo(f"   • Total memories: {total_memories}")
+            
+            # Show recent activity if available
+            if 'memories_last_week' in stats:
+                click.echo(f"   • Added this week: {stats['memories_last_week']}")
+            
+            # Database info
+            if 'database_info' in stats:
+                db_info = stats['database_info']
+                if 'database_size' in db_info:
+                    size_mb = db_info['database_size'] / (1024 * 1024)
+                    click.echo(f"   • Database size: {size_mb:.1f} MB")
+            
+        except Exception as e:
+            click.echo("📦 Services:")
+            click.echo(f"   • Database: ⚠️  Connected but error getting stats: {e}")
+    else:
+        click.echo("📦 Services:")
+        click.echo("   • Database: ❌ Not connected")
+        click.echo("   • Vector store: ❌ Not implemented") 
+        click.echo("   • AI services: ❌ Not implemented")
+        click.echo("\n💡 Database initialization may be needed")
     
-    click.echo("\n💡 Run setup commands to initialize components")
+    click.echo("\n🎯 Available commands: add, list, show, delete, status")
 
 
 @cli.command()

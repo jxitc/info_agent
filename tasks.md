@@ -24,7 +24,7 @@ This document breaks down the M0 prototype development into concrete, independen
 - [x] 2.1.2 Implement database connection and basic CRUD operations
 - [x] 2.1.3 Create database initialization and migration functions
 - [x] 2.1.4 Add database interface abstraction layer
-- [ ] 2.1.5 Connect CLI commands to database layer for basic memory add/delete operations
+- [x] 2.1.5 Connect CLI commands to database layer for basic memory add/delete operations
 
 ### 2.2 Vector Store Setup
 - [ ] 2.2.1 Set up ChromaDB for vector storage (most common RAG database) 
@@ -49,10 +49,10 @@ This document breaks down the M0 prototype development into concrete, independen
 ## 4. Core Business Logic
 
 ### 4.1 Memory Management
-- [ ] 4.1.1 Create Memory data model/class
+- [x] 4.1.1 Create Memory data model/class
 - [ ] 4.1.2 Implement Memory creation with AI processing pipeline
-- [ ] 4.1.3 Add basic field validation and sanitization
-- [ ] 4.1.4 Create memory update functionality
+- [x] 4.1.3 Add basic field validation and sanitization
+- [x] 4.1.4 Create memory update functionality
 
 ### 4.2 Search Engine
 - [ ] 4.2.1 Implement semantic search using vector embeddings
@@ -71,16 +71,16 @@ This document breaks down the M0 prototype development into concrete, independen
 - [x] 5.1.4 Add input validation and error handling
 
 ### 5.2 Core Commands
-- [ ] 5.2.1 Implement `add <text>` command for creating memories
+- [x] 5.2.1 Implement `add <text>` command for creating memories
 - [ ] 5.2.2 Create `search <query>` command with natural language processing
-- [ ] 5.2.3 Build `list` command for displaying recent memories
-- [ ] 5.2.4 Implement `show <id>` command for memory details
+- [x] 5.2.3 Build `list` command for displaying recent memories
+- [x] 5.2.4 Implement `show <id>` command for memory details
 
 ### 5.3 Output Formatting
 - [ ] 5.3.1 Design user-friendly output formatting for search results
-- [ ] 5.3.2 Implement table/list display for memory listings
-- [ ] 5.3.3 Add colored output and progress indicators
-- [ ] 5.3.4 Create detailed memory display format
+- [x] 5.3.2 Implement table/list display for memory listings
+- [x] 5.3.3 Add colored output and progress indicators
+- [x] 5.3.4 Create detailed memory display format
 
 ## 6. Configuration & Utilities
 
