@@ -45,6 +45,7 @@ This document provides step-by-step instructions for setting up the development 
    python -c "import click; print('Click installed successfully')"
    python -c "import openai; print('OpenAI installed successfully')"
    python -c "import chromadb; print('ChromaDB installed successfully')"
+   python -c "import sqlite3; print('SQLite installed successfully')"
    ```
 
 ### Step 3: OpenAI API Configuration **[HUMAN REQUIRED]**
@@ -70,11 +71,62 @@ This document provides step-by-step instructions for setting up the development 
    "
    ```
 
-### Step 4: Directory Structure Creation **[AI TASK]**
+### Step 4: SQLite Database Setup **[HUMAN REQUIRED]**
+
+SQLite comes built-in with Python, but you should verify it's working properly:
+
+1. **Test SQLite connection:**
+   ```bash
+   # Test basic SQLite functionality
+   python -c "
+   import sqlite3
+   import os
+   
+   # Create test database in memory
+   conn = sqlite3.connect(':memory:')
+   cursor = conn.cursor()
+   
+   # Test basic operations
+   cursor.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)')
+   cursor.execute('INSERT INTO test (name) VALUES (?)', ('Hello SQLite',))
+   cursor.execute('SELECT * FROM test')
+   result = cursor.fetchone()
+   
+   print('SQLite test successful:', result)
+   conn.close()
+   "
+   ```
+
+2. **Create application database directory:**
+   ```bash
+   # Create directory for application databases
+   mkdir -p ~/.info_agent/data
+   
+   # Test file-based database creation
+   python -c "
+   import sqlite3
+   import os
+   
+   db_path = os.path.expanduser('~/.info_agent/data/test.db')
+   conn = sqlite3.connect(db_path)
+   conn.execute('CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY)')
+   conn.close()
+   
+   print(f'Database created successfully at: {db_path}')
+   "
+   ```
+
+3. **Verify database file was created:**
+   ```bash
+   ls -la ~/.info_agent/data/
+   # Should show test.db file
+   ```
+
+### Step 5: Directory Structure Creation **[AI TASK]**
 - This will be handled automatically by the AI agent
 - Creates the project structure as defined in system_architecture.md
 
-### Step 5: Basic CLI Framework **[AI TASK]**
+### Step 6: Basic CLI Framework **[AI TASK]**
 - Sets up Click CLI framework
 - Creates basic command structure
 - Enables testing of components as they're built
@@ -97,6 +149,12 @@ This document provides step-by-step instructions for setting up the development 
    - Verify API key is valid
    - Check rate limits and billing status
    - Ensure environment variable is set correctly
+
+4. **SQLite issues:**
+   - SQLite is included with Python by default
+   - If import fails, reinstall Python
+   - Check file permissions for ~/.info_agent/data/ directory
+   - Verify disk space is available
 
 ### Getting Help
 - Check project documentation in `docs/`
