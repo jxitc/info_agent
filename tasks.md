@@ -20,10 +20,11 @@ This document breaks down the M0 prototype development into concrete, independen
 ## 2. Core Data Layer
 
 ### 2.1 Database Foundation
-- [ ] 2.1.1 Design SQLite schema for Memory table with JSON dynamic_fields column
-- [ ] 2.1.2 Implement database connection and basic CRUD operations
-- [ ] 2.1.3 Create database initialization and migration functions
-- [ ] 2.1.4 Add database interface abstraction layer
+- [x] 2.1.1 Design SQLite schema for Memory table with JSON dynamic_fields column
+- [x] 2.1.2 Implement database connection and basic CRUD operations
+- [x] 2.1.3 Create database initialization and migration functions
+- [x] 2.1.4 Add database interface abstraction layer
+- [ ] 2.1.5 Connect CLI commands to database layer for basic memory add/delete operations
 
 ### 2.2 Vector Store Setup
 - [ ] 2.2.1 Set up ChromaDB for vector storage (most common RAG database) 
