@@ -5,7 +5,7 @@ This document breaks down the M0 prototype development into concrete, independen
 ## 1. Project Setup & Environment
 
 ### 1.1 Basic Setup
-- [ ] 1.1.1 Create virtual environment and requirements.txt **[HUMAN REQUIRED]**
+- [x] 1.1.1 Create virtual environment and requirements.txt **[HUMAN REQUIRED]**
 - [ ] 1.1.2 Set up basic Python project structure with __init__.py files
 - [ ] 1.1.3 Configure basic logging setup
 - [ ] 1.1.4 Create main.py entry point

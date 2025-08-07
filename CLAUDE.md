@@ -16,3 +16,7 @@ Since this appears to be an early-stage project without established build tools,
 - Hybrid search combining semantic (RAG) and structured field-based queries
 - Version management preserves memory history during updates
 - Security and privacy features planned for M2 and later milestones
+
+
+## Implementating Tasks
+When completed, remember to mark task as completed in @tasks.md, e.g. `[x]`
