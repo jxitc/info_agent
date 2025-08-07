@@ -25,13 +25,11 @@ def main():
     logger.info("Starting Info Agent...")
     
     try:
-        # TODO: Import and initialize CLI when available
-        # from info_agent.cli.main import cli
-        # cli()
+        # Import and initialize CLI
+        from info_agent.cli.main import cli
+        cli()
         
-        logger.info("Info Agent v0.1.0")
-        logger.info("CLI interface not yet implemented.")
-        logger.info("This is a placeholder main.py entry point.")
+        logger.info("Info Agent CLI session ended")
         
     except KeyboardInterrupt:
         logger.info("Application interrupted by user")

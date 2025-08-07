@@ -64,10 +64,10 @@ This document breaks down the M0 prototype development into concrete, independen
 **Note: CLI framework should be prioritized early for development testing**
 
 ### 5.1 Command Framework
-- [ ] 5.1.1 Set up Click CLI framework
-- [ ] 5.1.2 Implement command routing and argument parsing
-- [ ] 5.1.3 Create basic help system and command documentation
-- [ ] 5.1.4 Add input validation and error handling
+- [x] 5.1.1 Set up Click CLI framework
+- [x] 5.1.2 Implement command routing and argument parsing
+- [x] 5.1.3 Create basic help system and command documentation
+- [x] 5.1.4 Add input validation and error handling
 
 ### 5.2 Core Commands
 - [ ] 5.2.1 Implement `add <text>` command for creating memories
