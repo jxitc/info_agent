@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AI Coding rules
+
+- Keep it very concise, don't propose over complicated solutions
+- Do not add any speculative features, we don't need it for now
+
 ## Project Overview
 
 See ./requirements.md for more detail about this running project
@@ -19,4 +24,4 @@ Since this appears to be an early-stage project without established build tools,
 
 
 ## Implementating Tasks
-When completed, remember to mark task as completed in @tasks.md, e.g. `[x]`
+- When completed, remember to mark task as completed in @tasks.md, e.g. `[x]`
