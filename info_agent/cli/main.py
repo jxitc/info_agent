@@ -404,7 +404,7 @@ def status(ctx):
         click.echo(f"   • Vector store: ⚠️  Error: {e}")
         click.echo("   • AI services: ❌ Not implemented")
     
-    click.echo("\n🎯 Available commands: add, list, show, delete, status, vector")
+    click.echo("\n🎯 Available commands: add, list, show, delete, status, vector, llm")
 
 
 @cli.command()
@@ -595,6 +595,372 @@ def reset(ctx):
     except Exception as e:
         click.echo(f"❌ Error resetting vector store: {e}")
         logger.error(f"Vector store reset failed: {e}")
+
+
+# LLM test command group for debugging
+@cli.group()
+@click.pass_context
+def llm(ctx):
+    """
+    LLM testing and debugging commands.
+    
+    Test and debug AI-powered information extraction functionality.
+    These commands help validate that the LLM integration is working correctly.
+    """
+    pass
+
+
+@llm.command()
+@click.argument('text', required=True)
+@click.option('--verbose-output', '-v', is_flag=True, help='Show detailed prompt and full response')
+@click.option('--save', '-s', is_flag=True, help='Save extracted data as a new memory')
+@click.pass_context
+def extract(ctx, text: str, verbose_output: bool, save: bool):
+    """
+    Test LLM information extraction on text input.
+    
+    TEXT: The text to analyze and extract information from.
+    
+    Examples:
+    
+        info-agent llm extract "Meeting with Sarah tomorrow at 2pm to discuss project budget"
+        
+        info-agent llm extract "Remember to backup database before maintenance" --verbose-output
+        
+        info-agent llm extract "Team standup notes" --save
+    """
+    import json
+    import os
+    from datetime import datetime
+    
+    logger = ctx.obj.logger
+    logger.info(f"Testing LLM extraction on {len(text)} characters")
+    
+    try:
+        # Check if OpenAI API key is available
+        if not os.getenv('OPENAI_API_KEY'):
+            click.echo("❌ OPENAI_API_KEY environment variable not set")
+            click.echo("💡 Set your API key: export OPENAI_API_KEY='your-key-here'")
+            return
+        
+        # Validate input
+        validated_text = validate_text_input(text)
+        
+        # Import AI components
+        try:
+            from info_agent.ai import OpenAIClient, extract_all_information_prompt
+        except ImportError as e:
+            click.echo(f"❌ Failed to import AI components: {e}")
+            return
+        
+        # Create AI client
+        click.echo("🔄 Initializing AI client...")
+        try:
+            client = OpenAIClient()
+        except Exception as e:
+            click.echo(f"❌ Failed to initialize AI client: {e}")
+            return
+        
+        # Test connection
+        click.echo("🔗 Testing API connection...")
+        if not client.test_connection():
+            click.echo("❌ API connection test failed")
+            return
+        
+        # Generate prompt
+        click.echo("📝 Generating extraction prompt...")
+        prompt = extract_all_information_prompt(validated_text)
+        
+        if verbose_output:
+            click.echo("\n" + "=" * 60)
+            click.echo("🔍 EXTRACTION PROMPT:")
+            click.echo("=" * 60)
+            click.echo(prompt)
+            click.echo("=" * 60)
+        
+        # Call LLM
+        click.echo("🧠 Calling LLM for information extraction...")
+        response = client.chat_completion([{"role": "user", "content": prompt}])
+        
+        if not response.success:
+            click.echo(f"❌ LLM extraction failed: {response.error}")
+            return
+        
+        # Parse JSON response
+        click.echo("📊 Parsing extraction results...")
+        try:
+            extracted_data = json.loads(response.content)
+        except json.JSONDecodeError as e:
+            click.echo(f"❌ Failed to parse JSON response: {e}")
+            if verbose_output:
+                click.echo(f"\nRaw response:\n{response.content}")
+            return
+        
+        # Display results
+        click.echo("✅ Information extraction successful!")
+        click.echo(f"📊 Tokens used: {response.tokens_used}")
+        click.echo(f"🤖 Model: {response.model}")
+        click.echo()
+        
+        # Show extracted information in a user-friendly format
+        click.echo("📋 EXTRACTED INFORMATION:")
+        click.echo("=" * 50)
+        
+        # Title and description
+        if 'title' in extracted_data:
+            click.echo(f"🏷️  Title: {extracted_data['title']}")
+        
+        if 'description' in extracted_data:
+            click.echo(f"📖 Description: {extracted_data['description']}")
+        
+        if 'summary' in extracted_data:
+            click.echo(f"📝 Summary: {extracted_data['summary']}")
+        
+        # Categories
+        if 'categories' in extracted_data and extracted_data['categories']:
+            categories = ", ".join(extracted_data['categories'])
+            click.echo(f"📂 Categories: {categories}")
+        
+        # Key facts
+        if 'key_facts' in extracted_data and extracted_data['key_facts']:
+            click.echo("💡 Key Facts:")
+            for fact in extracted_data['key_facts']:
+                click.echo(f"   • {fact}")
+        
+        # Dates and times
+        if 'dates_times' in extracted_data and extracted_data['dates_times']:
+            click.echo("📅 Dates/Times:")
+            for date_time in extracted_data['dates_times']:
+                click.echo(f"   • {date_time}")
+        
+        # Entities
+        if 'entities' in extracted_data:
+            entities = extracted_data['entities']
+            if entities.get('people'):
+                people = ", ".join(entities['people'])
+                click.echo(f"👥 People: {people}")
+            if entities.get('places'):
+                places = ", ".join(entities['places'])
+                click.echo(f"📍 Places: {places}")
+            if entities.get('organizations'):
+                orgs = ", ".join(entities['organizations'])
+                click.echo(f"🏢 Organizations: {orgs}")
+        
+        # Action items
+        if 'action_items' in extracted_data and extracted_data['action_items']:
+            click.echo("✅ Action Items:")
+            for item in extracted_data['action_items']:
+                click.echo(f"   • {item}")
+        
+        # Dynamic fields
+        if 'dynamic_fields' in extracted_data and extracted_data['dynamic_fields']:
+            click.echo("🔧 Dynamic Fields:")
+            for key, value in extracted_data['dynamic_fields'].items():
+                click.echo(f"   • {key}: {value}")
+        
+        # Show raw JSON if verbose
+        if verbose_output:
+            click.echo("\n" + "=" * 60)
+            click.echo("🔍 RAW JSON RESPONSE:")
+            click.echo("=" * 60)
+            click.echo(json.dumps(extracted_data, indent=2))
+            click.echo("=" * 60)
+        
+        # Save as memory if requested
+        if save:
+            click.echo("\n💾 Saving extracted data as memory...")
+            
+            # Check if memory service is available
+            if not ctx.obj.memory_service:
+                click.echo("❌ Database service not available - cannot save memory")
+                click.echo("💡 Run without --save flag to test extraction only")
+                return
+            
+            try:
+                # Create memory with extracted data
+                title = extracted_data.get('title', f"LLM Test Memory - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                
+                memory = ctx.obj.memory_service.add_memory(
+                    content=validated_text,
+                    title=title
+                )
+                
+                # Add dynamic fields from extraction
+                if memory and 'dynamic_fields' in extracted_data:
+                    memory.dynamic_fields = extracted_data['dynamic_fields']
+                    # Add extraction metadata
+                    memory.dynamic_fields['extraction_method'] = 'llm_test'
+                    memory.dynamic_fields['llm_model'] = response.model
+                    memory.dynamic_fields['extraction_date'] = datetime.now().isoformat()
+                    
+                    ctx.obj.memory_service.update_memory(memory)
+                
+                click.echo(f"✅ Memory saved successfully!")
+                click.echo(f"🆔 Memory ID: {memory.id}")
+                
+            except Exception as e:
+                click.echo(f"❌ Failed to save memory: {e}")
+        
+    except Exception as e:
+        click.echo(f"❌ LLM extraction test failed: {e}")
+        logger.error(f"LLM extraction test failed: {e}")
+
+
+@llm.command()
+@click.argument('text', required=True)
+@click.option('--model', '-m', default="text-embedding-3-small", help='Embedding model to use')
+@click.pass_context
+def embed(ctx, text: str, model: str):
+    """
+    Test text embedding generation.
+    
+    TEXT: The text to generate embeddings for.
+    
+    Examples:
+    
+        info-agent llm embed "This is a test sentence"
+        
+        info-agent llm embed "Meeting notes" --model text-embedding-3-large
+    """
+    import os
+    
+    logger = ctx.obj.logger
+    logger.info(f"Testing embedding generation on {len(text)} characters")
+    
+    try:
+        # Check if OpenAI API key is available
+        if not os.getenv('OPENAI_API_KEY'):
+            click.echo("❌ OPENAI_API_KEY environment variable not set")
+            click.echo("💡 Set your API key: export OPENAI_API_KEY='your-key-here'")
+            return
+        
+        # Validate input
+        validated_text = validate_text_input(text)
+        
+        # Import AI components
+        try:
+            from info_agent.ai import OpenAIClient
+        except ImportError as e:
+            click.echo(f"❌ Failed to import AI components: {e}")
+            return
+        
+        # Create AI client
+        click.echo("🔄 Initializing AI client...")
+        try:
+            client = OpenAIClient()
+        except Exception as e:
+            click.echo(f"❌ Failed to initialize AI client: {e}")
+            return
+        
+        # Generate embedding
+        click.echo(f"🧠 Generating embedding with model: {model}...")
+        response = client.generate_embedding(validated_text, model=model)
+        
+        if not response.success:
+            click.echo(f"❌ Embedding generation failed: {response.error}")
+            return
+        
+        # Display results
+        click.echo("✅ Embedding generation successful!")
+        click.echo(f"📊 Tokens used: {response.tokens_used}")
+        click.echo(f"🤖 Model: {response.model}")
+        click.echo(f"📏 Dimensions: {response.dimensions}")
+        click.echo(f"🔢 First 10 values: {response.embedding[:10]}")
+        
+        # Calculate some basic statistics
+        import statistics
+        if response.embedding:
+            mean_val = statistics.mean(response.embedding)
+            std_val = statistics.stdev(response.embedding) if len(response.embedding) > 1 else 0
+            min_val = min(response.embedding)
+            max_val = max(response.embedding)
+            
+            click.echo(f"📊 Statistics:")
+            click.echo(f"   • Mean: {mean_val:.6f}")
+            click.echo(f"   • Std Dev: {std_val:.6f}")
+            click.echo(f"   • Min: {min_val:.6f}")
+            click.echo(f"   • Max: {max_val:.6f}")
+        
+    except Exception as e:
+        click.echo(f"❌ Embedding test failed: {e}")
+        logger.error(f"Embedding test failed: {e}")
+
+
+@llm.command()
+@click.pass_context
+def models(ctx):
+    """
+    List available models from OpenAI API.
+    """
+    import os
+    
+    logger = ctx.obj.logger
+    
+    try:
+        # Check if OpenAI API key is available
+        if not os.getenv('OPENAI_API_KEY'):
+            click.echo("❌ OPENAI_API_KEY environment variable not set")
+            click.echo("💡 Set your API key: export OPENAI_API_KEY='your-key-here'")
+            return
+        
+        # Import AI components
+        try:
+            from info_agent.ai import OpenAIClient
+        except ImportError as e:
+            click.echo(f"❌ Failed to import AI components: {e}")
+            return
+        
+        # Create AI client
+        click.echo("🔄 Initializing AI client...")
+        try:
+            client = OpenAIClient()
+        except Exception as e:
+            click.echo(f"❌ Failed to initialize AI client: {e}")
+            return
+        
+        # Get available models
+        click.echo("📋 Fetching available models...")
+        models = client.get_available_models()
+        
+        if not models:
+            click.echo("❌ No models found or failed to fetch models")
+            return
+        
+        # Filter and display relevant models
+        chat_models = [m for m in models if 'gpt' in m.lower()]
+        embedding_models = [m for m in models if 'embedding' in m.lower()]
+        
+        click.echo("✅ Available Models:")
+        click.echo()
+        
+        if chat_models:
+            click.echo("🤖 Chat/Completion Models:")
+            for model in sorted(chat_models):
+                click.echo(f"   • {model}")
+            click.echo()
+        
+        if embedding_models:
+            click.echo("🧠 Embedding Models:")
+            for model in sorted(embedding_models):
+                click.echo(f"   • {model}")
+            click.echo()
+        
+        # Validate default models
+        default_chat = client.default_model
+        default_embedding = client.default_embedding_model
+        
+        validation = client.validate_models([default_chat, default_embedding])
+        
+        click.echo("🔧 Default Model Validation:")
+        for model, available in validation.items():
+            status = "✅" if available else "❌"
+            click.echo(f"   {status} {model}")
+        
+        click.echo(f"\n📊 Total models found: {len(models)}")
+        
+    except Exception as e:
+        click.echo(f"❌ Models test failed: {e}")
+        logger.error(f"Models test failed: {e}")
 
 
 # Add help commands to the CLI

@@ -37,16 +37,18 @@ This document breaks down the M0 prototype development into concrete, independen
 ## 3. AI Integration Layer
 
 ### 3.1 LLM Client
-- [ ] 3.1.1 Implement OpenAI API client wrapper
-- [ ] 3.1.2 Create prompt templates for information extraction
-- [ ] 3.1.3 Add retry logic and error handling for API calls
-- [ ] 3.1.4 Test basic text processing functionality
+- [x] 3.1.1 Implement OpenAI API client wrapper
+- [x] 3.1.2 Create prompt templates for information extraction
+- [x] 3.1.3 Add retry logic and error handling for API calls
+- [x] 3.1.4 Test basic text processing functionality
 
 ### 3.2 Information Processing
 - [ ] 3.2.1 Implement information extraction from unstructured text
 - [ ] 3.2.2 Create AI-powered title and description generation
 - [ ] 3.2.3 Build dynamic field creation logic
 - [ ] 3.2.4 Implement text embedding generation
+- [x] 3.2.5 Add CLI command to test and debug LLM extraction
+- [x] 3.2.6 Create util function to process text into Memory object using LLM
 
 ## 4. Core Business Logic
 

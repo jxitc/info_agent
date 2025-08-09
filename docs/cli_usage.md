@@ -44,7 +44,7 @@ python main.py status
    • Added this week: 3
    • Database size: 0.1 MB
 
-🎯 Available commands: add, list, show, delete, status, vector
+🎯 Available commands: add, list, show, delete, status, vector, llm
 ```
 
 ### `add` - Add New Memory
@@ -308,6 +308,93 @@ python main.py add --help
 
 **`show` and `delete` commands:**
 - Memory ID is required as argument
+
+### `llm` - AI Testing and Debugging Commands
+Test and debug AI-powered information extraction functionality. These commands help validate that the LLM integration is working correctly.
+
+```bash
+python main.py llm <command> [options]
+```
+
+#### `llm extract` - Test Information Extraction
+Test AI information extraction on text input to debug and validate the extraction pipeline.
+
+```bash
+python main.py llm extract "Your text here" [options]
+```
+
+**Options:**
+- `--verbose-output, -v`: Show detailed prompt and full response
+- `--save, -s`: Save extracted data as a new memory
+
+**Examples:**
+```bash
+# Basic extraction test
+python main.py llm extract "Meeting with Sarah tomorrow at 2pm to discuss project budget"
+
+# Show detailed prompt and response  
+python main.py llm extract "Team standup notes from today" --verbose-output
+
+# Extract and save as memory
+python main.py llm extract "Important project deadline next Friday" --save
+```
+
+**Example Output:**
+```
+🔄 Initializing AI client...
+🔗 Testing API connection...
+📝 Generating extraction prompt...
+🧠 Calling LLM for information extraction...
+📊 Parsing extraction results...
+✅ Information extraction successful!
+📊 Tokens used: 142
+🤖 Model: gpt-3.5-turbo
+
+📋 EXTRACTED INFORMATION:
+==================================================
+🏷️  Title: Project Budget Meeting with Sarah
+📖 Description: Meeting scheduled to discuss project budget planning
+📝 Summary: Tomorrow at 2pm, meeting with Sarah to discuss project budget
+📂 Categories: work, meetings, finance
+💡 Key Facts:
+   • Project budget discussion
+   • Meeting with Sarah
+📅 Dates/Times:
+   • tomorrow at 2pm
+👥 People: Sarah
+✅ Action Items:
+   • discuss project budget
+🔧 Dynamic Fields:
+   • priority: medium
+   • status: planned
+   • meeting_type: one_on_one
+```
+
+#### `llm embed` - Test Text Embedding
+Test text embedding generation for debugging vector search functionality.
+
+```bash
+python main.py llm embed "Your text here" [options]
+```
+
+**Options:**
+- `--model, -m`: Embedding model to use (default: text-embedding-3-small)
+
+**Examples:**
+```bash
+# Basic embedding test
+python main.py llm embed "This is a test sentence"
+
+# Test with different model
+python main.py llm embed "Meeting notes" --model text-embedding-3-large
+```
+
+#### `llm models` - List Available Models
+Display available OpenAI models and validate default model configuration.
+
+```bash
+python main.py llm models
+```
 
 ## Getting Help
 

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Keep it very concise, don't propose over complicated solutions
 - Do not add any speculative features, we don't need it for now
 - When completed, remember to mark task as completed in @tasks.md, e.g. `[x]`
-- Execute ONE task at a time! Not all tasks in a section at one step!
+- Execute ONE task from @tasks.md at a time! Not all tasks in a section at one step!
 - NEVER auto-generate daily status updates without explicit user request
 - NEVER auto-commit or auto-push to git without explicit user confirmation - always ask first
 - Update documentation promptly
