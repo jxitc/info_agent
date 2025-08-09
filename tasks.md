@@ -32,7 +32,7 @@ This document breaks down the M0 prototype development into concrete, independen
 - [x] 2.2.3 Create embedding storage and retrieval functions
 - [x] 2.2.4 Test vector similarity search functionality
 - [x] 2.2.5 Fix inconsistent return types - semantic search should return MemorySearchResult like text search
-- [ ] 2.2.6 Add CLI test support for vector store operations (add/search without database)
+- [x] 2.2.6 Add CLI test support for vector store operations (add/search without database)
 
 ## 3. AI Integration Layer
 
