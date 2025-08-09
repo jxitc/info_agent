@@ -20,6 +20,8 @@ from info_agent.cli.validators import (
 )
 from info_agent.cli.help import add_help_commands
 from info_agent.core.repository import get_memory_service, RepositoryError
+from info_agent.core.vector_store import VectorStore, VectorStoreConfig
+from info_agent.core.models import Memory
 
 
 # Global context object for sharing state between commands
@@ -384,11 +386,25 @@ def status(ctx):
     else:
         click.echo("📦 Services:")
         click.echo("   • Database: ❌ Not connected")
-        click.echo("   • Vector store: ❌ Not implemented") 
-        click.echo("   • AI services: ❌ Not implemented")
         click.echo("\n💡 Database initialization may be needed")
     
-    click.echo("\n🎯 Available commands: add, list, show, delete, status")
+    # Check vector store separately (it works without database)
+    try:
+        from info_agent.core.vector_store import VectorStore
+        vector_store = VectorStore()
+        vector_stats = vector_store.get_collection_stats()
+        vector_docs = vector_stats.get('total_documents', 0)
+        
+        if ctx.obj.memory_service:
+            click.echo(f"   • Vector store: ✅ Connected ({vector_docs} documents)")
+        else:
+            click.echo(f"   • Vector store: ✅ Available ({vector_docs} documents)")
+            click.echo("   • AI services: ❌ Not implemented")
+    except Exception as e:
+        click.echo(f"   • Vector store: ⚠️  Error: {e}")
+        click.echo("   • AI services: ❌ Not implemented")
+    
+    click.echo("\n🎯 Available commands: add, list, show, delete, status, vector")
 
 
 @cli.command()
@@ -404,6 +420,181 @@ def version(ctx):
     
     click.echo(f"Info Agent v{version_str}")
     click.echo("AI-powered personal memory and information management system")
+
+
+# Vector store command group for testing
+@cli.group()
+@click.pass_context
+def vector(ctx):
+    """
+    Vector store operations (testing/development commands).
+    
+    These commands work directly with the vector store without the database layer,
+    useful for testing and development purposes.
+    """
+    pass
+
+
+@vector.command()
+@click.argument('text', required=True)
+@click.option('--title', '-t', help='Title for the memory')
+@click.option('--id', 'memory_id', type=int, help='Memory ID (for testing)')
+@click.pass_context
+def add(ctx, text: str, title: Optional[str], memory_id: Optional[int]):
+    """
+    Add content directly to vector store for testing.
+    
+    TEXT: The content to store in the vector store.
+    
+    Examples:
+    
+        info-agent vector add "Test content for vector search"
+        
+        info-agent vector add "Meeting notes" --title "Team Meeting" --id 999
+    """
+    logger = ctx.obj.logger
+    
+    try:
+        # Validate input
+        validated_text = validate_text_input(text)
+        logger.info(f"Adding content to vector store: {len(validated_text)} characters")
+        
+        # Create vector store instance
+        click.echo("🔄 Initializing vector store...")
+        vector_store = VectorStore()
+        
+        # Create memory object
+        memory = Memory(
+            id=memory_id or 1,  # Default to 1 if not specified
+            content=validated_text,
+            title=title or f"Vector Test Memory {memory_id or 1}"
+        )
+        
+        # Add to vector store
+        click.echo("💾 Adding to vector store...")
+        success = vector_store.add_memory(memory)
+        
+        if success:
+            click.echo("✅ Content added to vector store successfully!")
+            click.echo(f"🆔 Memory ID: {memory.id}")
+            click.echo(f"🏷️  Title: {memory.title}")
+            click.echo(f"📝 Content: {memory.content[:100]}{'...' if len(memory.content) > 100 else ''}")
+            click.echo(f"📊 Word count: {memory.word_count}")
+        else:
+            click.echo("❌ Failed to add content to vector store")
+        
+    except Exception as e:
+        click.echo(f"❌ Error: {e}")
+        logger.error(f"Vector store add failed: {e}")
+
+
+@vector.command()
+@click.argument('query', required=True)
+@click.option('--limit', '-l', default=5, help='Maximum number of results to return')
+@click.pass_context
+def search(ctx, query: str, limit: int):
+    """
+    Search vector store directly for testing.
+    
+    QUERY: The search query text.
+    
+    Examples:
+    
+        info-agent vector search "meeting notes"
+        
+        info-agent vector search "project deadlines" --limit 3
+    """
+    logger = ctx.obj.logger
+    
+    try:
+        # Validate input
+        validated_query = validate_search_query(query)
+        validated_limit = validate_limit(limit, min_value=1, max_value=50)
+        
+        logger.info(f"Searching vector store for: '{validated_query}' (limit: {validated_limit})")
+        
+        # Create vector store instance
+        click.echo("🔄 Initializing vector store...")
+        vector_store = VectorStore()
+        
+        # Perform search
+        click.echo(f"🔍 Searching for: '{validated_query}'")
+        results = vector_store.search_memories(validated_query, limit=validated_limit)
+        
+        if not results:
+            click.echo("📋 No results found")
+            click.echo("💡 Try adding some content first with: info-agent vector add \"your content\"")
+            return
+        
+        click.echo(f"✅ Found {len(results)} results:")
+        click.echo()
+        
+        for i, result in enumerate(results, 1):
+            similarity = result.relevance_score
+            title = result.title
+            snippet = result.snippet
+            memory_id = result.memory_id
+            
+            click.echo(f"{i}. 🆔 ID: {memory_id} | 📊 Score: {similarity:.3f}")
+            click.echo(f"   🏷️  Title: {title}")
+            click.echo(f"   📝 Snippet: {snippet}")
+            click.echo("-" * 60)
+        
+    except Exception as e:
+        click.echo(f"❌ Error: {e}")
+        logger.error(f"Vector store search failed: {e}")
+
+
+@vector.command()
+@click.pass_context
+def stats(ctx):
+    """Show vector store statistics."""
+    logger = ctx.obj.logger
+    
+    try:
+        click.echo("📊 Vector Store Statistics")
+        click.echo("=" * 40)
+        
+        # Create vector store instance
+        vector_store = VectorStore()
+        stats = vector_store.get_collection_stats()
+        
+        click.echo(f"📁 Data directory: {stats.get('data_directory', 'N/A')}")
+        click.echo(f"📦 Collection: {stats.get('collection_name', 'N/A')}")
+        click.echo(f"🧠 Embedding model: {stats.get('embedding_model', 'N/A')}")
+        click.echo(f"📄 Total documents: {stats.get('total_documents', 0)}")
+        
+        if 'error' in stats:
+            click.echo(f"⚠️  Error: {stats['error']}")
+        
+    except Exception as e:
+        click.echo(f"❌ Error getting vector store stats: {e}")
+        logger.error(f"Vector store stats failed: {e}")
+
+
+@vector.command()
+@click.confirmation_option(prompt='This will delete all vector store data. Are you sure?')
+@click.pass_context
+def reset(ctx):
+    """Reset (clear all data from) the vector store."""
+    logger = ctx.obj.logger
+    
+    try:
+        click.echo("⚠️  Resetting vector store...")
+        
+        # Create vector store instance
+        vector_store = VectorStore()
+        success = vector_store.reset_collection()
+        
+        if success:
+            click.echo("✅ Vector store reset successfully")
+            click.echo("📄 All documents have been deleted")
+        else:
+            click.echo("❌ Failed to reset vector store")
+        
+    except Exception as e:
+        click.echo(f"❌ Error resetting vector store: {e}")
+        logger.error(f"Vector store reset failed: {e}")
 
 
 # Add help commands to the CLI

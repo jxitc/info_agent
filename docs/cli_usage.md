@@ -44,7 +44,7 @@ python main.py status
    • Added this week: 3
    • Database size: 0.1 MB
 
-🎯 Available commands: add, list, show, delete, status
+🎯 Available commands: add, list, show, delete, status, vector
 ```
 
 ### `add` - Add New Memory
@@ -177,6 +177,111 @@ Info Agent v0.1.0
 AI-powered personal memory and information management system
 ```
 
+### `vector` - Vector Store Operations (Testing/Development)
+Direct vector store operations for testing and development purposes, working independently of the database layer.
+
+```bash
+python main.py vector <command> [options]
+```
+
+#### `vector add` - Add Content to Vector Store
+Add content directly to the vector store for testing.
+
+```bash
+python main.py vector add "Your content here" [options]
+```
+
+**Options:**
+- `--title, -t`: Title for the memory
+- `--id`: Memory ID (for testing purposes)
+
+**Examples:**
+```bash
+# Basic content addition
+python main.py vector add "Test content for vector search"
+
+# With title and custom ID
+python main.py vector add "Meeting notes about project architecture" --title "Team Meeting" --id 999
+```
+
+**Example Output:**
+```
+🔄 Initializing vector store...
+💾 Adding to vector store...
+✅ Content added to vector store successfully!
+🆔 Memory ID: 999
+🏷️  Title: Team Meeting
+📝 Content: Meeting notes about project architecture
+📊 Word count: 6
+```
+
+#### `vector search` - Search Vector Store
+Search the vector store directly using semantic similarity.
+
+```bash
+python main.py vector search "search query" [options]
+```
+
+**Options:**
+- `--limit, -l`: Maximum number of results to return (default: 5)
+
+**Examples:**
+```bash
+# Basic search
+python main.py vector search "meeting notes"
+
+# Limited results
+python main.py vector search "project deadlines" --limit 3
+```
+
+**Example Output:**
+```
+🔄 Initializing vector store...
+🔍 Searching for: 'meeting notes'
+✅ Found 2 results:
+
+1. 🆔 ID: 999 | 📊 Score: 0.854
+   🏷️  Title: Team Meeting
+   📝 Snippet: Meeting notes about project architecture
+------------------------------------------------------------
+2. 🆔 ID: 100 | 📊 Score: 0.625
+   🏷️  Title: CLI Test Memory
+   📝 Snippet: This is a test memory for CLI vector store functionality
+------------------------------------------------------------
+```
+
+#### `vector stats` - Vector Store Statistics
+Show current vector store statistics and configuration.
+
+```bash
+python main.py vector stats
+```
+
+**Example Output:**
+```
+📊 Vector Store Statistics
+========================================
+📁 Data directory: /Users/username/.info_agent/data
+📦 Collection: memories
+🧠 Embedding model: all-MiniLM-L6-v2
+📄 Total documents: 5
+```
+
+#### `vector reset` - Reset Vector Store
+Clear all data from the vector store (with confirmation prompt).
+
+```bash
+python main.py vector reset
+```
+
+**Example Output:**
+```
+This will delete all vector store data. Are you sure? [y/N]: y
+⚠️  Resetting vector store...
+✅ Vector store reset successfully
+📄 All documents have been deleted
+```
+
 ## Command Options
 
 ### Global Options
@@ -212,6 +317,8 @@ Get help for any command:
 python main.py --help              # General help
 python main.py add --help          # Help for add command
 python main.py list --help         # Help for list command
+python main.py vector --help       # Help for vector commands
+python main.py vector add --help   # Help for vector add command
 ```
 
 ### Extended Help System
@@ -262,6 +369,29 @@ python main.py troubleshooting         # Troubleshooting information
    python main.py delete 12
    ```
 
+### Vector Store Testing
+For testing vector search functionality independently:
+
+1. **Check vector store status:**
+   ```bash
+   python main.py vector stats
+   ```
+
+2. **Add test content:**
+   ```bash
+   python main.py vector add "Meeting with development team about new features" --title "Dev Meeting" --id 100
+   ```
+
+3. **Test semantic search:**
+   ```bash
+   python main.py vector search "team meeting development"
+   ```
+
+4. **Reset for clean testing:**
+   ```bash
+   python main.py vector reset
+   ```
+
 ## Data Storage
 
 - **Database Location:** `~/.info_agent/data/info_agent.db`
@@ -301,7 +431,7 @@ python main.py troubleshooting         # Troubleshooting information
 **Note: This is the M0 prototype with basic functionality**
 
 - **No AI processing yet:** Dynamic fields are simple placeholders
-- **No search capability:** Full-text search not yet implemented  
+- **Limited search capability:** Vector search available via `vector search` command, main search not yet implemented  
 - **No categories or tags:** Basic metadata only
 - **No data export:** Import/export features not yet available
 - **No configuration:** Uses default settings only
@@ -313,7 +443,7 @@ These features will be added in future development phases.
 - **AI-powered information extraction**
 - **Natural language search**
 - **Smart categorization and tagging**
-- **Vector-based semantic search**
+- **Integrated semantic search** (vector search is available via `vector search` command)
 - **Data import/export**
 - **Configuration management**
 - **Advanced query capabilities**

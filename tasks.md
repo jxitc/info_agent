@@ -27,10 +27,12 @@ This document breaks down the M0 prototype development into concrete, independen
 - [x] 2.1.5 Connect CLI commands to database layer for basic memory add/delete operations
 
 ### 2.2 Vector Store Setup
-- [ ] 2.2.1 Set up ChromaDB for vector storage (most common RAG database) 
-- [ ] 2.2.2 Implement vector store connection and basic operations
-- [ ] 2.2.3 Create embedding storage and retrieval functions
-- [ ] 2.2.4 Test vector similarity search functionality
+- [x] 2.2.1 Set up ChromaDB for vector storage (most common RAG database) 
+- [x] 2.2.2 Implement vector store connection and basic operations
+- [x] 2.2.3 Create embedding storage and retrieval functions
+- [x] 2.2.4 Test vector similarity search functionality
+- [x] 2.2.5 Fix inconsistent return types - semantic search should return MemorySearchResult like text search
+- [ ] 2.2.6 Add CLI test support for vector store operations (add/search without database)
 
 ## 3. AI Integration Layer
 
@@ -162,6 +164,7 @@ Complete after Phase 3: 7.1 → 7.2 → 7.3 → 8.1 → 8.2 → 9.1 → 9.2
 - CLI framework (5.1) moved to Phase 1 for early testing capability
 - Core CLI commands (5.2) integrated into Phase 2 alongside core logic
 - This allows testing each component as it's developed
+
 
 ## Notes
 

@@ -8,6 +8,7 @@ openai>=1.3.0
 
 # Vector Database for RAG
 chromadb>=0.4.0
+sentence-transformers>=2.2.0  # For embeddings
 
 # Configuration Management
 pyyaml>=6.0

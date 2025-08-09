@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from info_agent.core.models import Memory, MemorySearchResult
 from info_agent.core.database import DatabaseConnection, get_database
 from info_agent.core.migrations import DatabaseInitializer
+from info_agent.core.vector_store import VectorStore, get_vector_store
 from info_agent.utils.logging_config import get_logger
 
 
@@ -55,7 +56,17 @@ class MemoryRepositoryInterface(ABC):
     
     @abstractmethod
     def search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
-        """Search memories."""
+        """Search memories using text search."""
+        pass
+    
+    @abstractmethod
+    def semantic_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """Search memories using semantic/vector similarity."""
+        pass
+    
+    @abstractmethod
+    def hybrid_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """Search memories using combined text + semantic search."""
         pass
     
     @abstractmethod
@@ -72,15 +83,18 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
     with automatic initialization and error handling.
     """
     
-    def __init__(self, db_connection: Optional[DatabaseConnection] = None):
+    def __init__(self, db_connection: Optional[DatabaseConnection] = None, 
+                 vector_store: Optional[VectorStore] = None):
         """
-        Initialize repository with database connection.
+        Initialize repository with database connection and vector store.
         
         Args:
             db_connection: Database connection. If None, uses global connection.
+            vector_store: Vector store instance. If None, uses global instance.
         """
         self.logger = get_logger(__name__)
         self.db = db_connection or get_database()
+        self.vector_store = vector_store or get_vector_store()
         
         # Ensure database is initialized
         self._ensure_initialized()
@@ -119,6 +133,18 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
                     raise RepositoryError(f"Memory with this content already exists (ID: {existing.id})")
             
             created_memory = self.db.create_memory(memory)
+            
+            # Add to vector store
+            try:
+                success = self.vector_store.add_memory(created_memory)
+                if success:
+                    self.logger.debug(f"Added memory {created_memory.id} to vector store")
+                else:
+                    self.logger.warning(f"Failed to add memory {created_memory.id} to vector store")
+            except Exception as e:
+                self.logger.error(f"Vector store add failed for memory {created_memory.id}: {e}")
+                # Don't fail the entire operation if vector store fails
+            
             self.logger.info(f"Created memory: {created_memory.id}")
             return created_memory
             
@@ -163,6 +189,17 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
         """
         try:
             updated_memory = self.db.update_memory(memory)
+            
+            # Update in vector store
+            try:
+                success = self.vector_store.update_memory(updated_memory)
+                if success:
+                    self.logger.debug(f"Updated memory {updated_memory.id} in vector store")
+                else:
+                    self.logger.warning(f"Failed to update memory {updated_memory.id} in vector store")
+            except Exception as e:
+                self.logger.error(f"Vector store update failed for memory {updated_memory.id}: {e}")
+            
             self.logger.info(f"Updated memory: {updated_memory.id}")
             return updated_memory
             
@@ -186,6 +223,16 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
         try:
             success = self.db.delete_memory(memory_id)
             if success:
+                # Delete from vector store
+                try:
+                    vector_success = self.vector_store.delete_memory(memory_id)
+                    if vector_success:
+                        self.logger.debug(f"Deleted memory {memory_id} from vector store")
+                    else:
+                        self.logger.warning(f"Failed to delete memory {memory_id} from vector store")
+                except Exception as e:
+                    self.logger.error(f"Vector store delete failed for memory {memory_id}: {e}")
+                
                 self.logger.info(f"Deleted memory: {memory_id}")
             else:
                 self.logger.warning(f"Memory not found for deletion: {memory_id}")
@@ -365,6 +412,103 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
         except Exception as e:
             self.logger.error(f"Failed to get statistics: {e}")
             return {'error': str(e)}
+    
+    def semantic_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """
+        Search memories using semantic/vector similarity.
+        
+        Args:
+            query: Search query string
+            limit: Maximum number of results
+            
+        Returns:
+            List of MemorySearchResult objects with similarity scores
+        """
+        try:
+            vector_results = self.vector_store.search_memories(query, limit=limit)
+            search_results = []
+            
+            # vector_results are already MemorySearchResult objects from the vector store
+            search_results = vector_results
+            
+            self.logger.debug(f"Semantic search '{query}' returned {len(search_results)} results")
+            return search_results
+            
+        except Exception as e:
+            self.logger.error(f"Semantic search failed for query '{query}': {e}")
+            raise RepositoryError(f"Semantic search operation failed: {e}")
+    
+    def hybrid_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """
+        Search memories using combined text + semantic search.
+        
+        Args:
+            query: Search query string
+            limit: Maximum number of results
+            
+        Returns:
+            List of MemorySearchResult objects from combined search
+        """
+        try:
+            # Get results from both search methods
+            fts_results = self.search(query, limit=limit)
+            semantic_results = self.semantic_search(query, limit=limit)
+            
+            # Combine and deduplicate results
+            combined_results = []
+            seen_ids = set()
+            
+            # Add FTS results first
+            for result in fts_results:
+                if result.memory.id not in seen_ids:
+                    # Mark as text search result
+                    result.match_type = "text"
+                    combined_results.append(result)
+                    seen_ids.add(result.memory.id)
+            
+            # Add semantic results that aren't already included
+            for result in semantic_results:
+                memory_id = result.memory.id
+                if memory_id not in seen_ids:
+                    # Mark as semantic search result
+                    result.match_type = "semantic"
+                    combined_results.append(result)
+                    seen_ids.add(memory_id)
+                else:
+                    # Memory found in both searches - boost its score and mark as hybrid
+                    for combined_result in combined_results:
+                        if combined_result.memory.id == memory_id:
+                            # Boost score for items found in both searches
+                            combined_result.relevance_score = min(
+                                1.0, 
+                                combined_result.relevance_score + 0.2
+                            )
+                            combined_result.match_type = "hybrid"
+                            # Combine matched fields
+                            if hasattr(combined_result, 'matched_fields') and hasattr(result, 'matched_fields'):
+                                combined_result.matched_fields = list(set(
+                                    combined_result.matched_fields + result.matched_fields
+                                ))
+                            break
+            
+            # Sort by relevance score (descending) and limit results
+            combined_results.sort(key=lambda x: x.relevance_score, reverse=True)
+            combined_results = combined_results[:limit]
+            
+            self.logger.debug(f"Hybrid search '{query}' returned {len(combined_results)} results")
+            return combined_results
+            
+        except Exception as e:
+            self.logger.error(f"Hybrid search failed for query '{query}': {e}")
+            raise RepositoryError(f"Hybrid search operation failed: {e}")
+    
+    def get_vector_store_stats(self) -> Dict[str, Any]:
+        """Get vector store statistics."""
+        try:
+            return self.vector_store.get_collection_stats()
+        except Exception as e:
+            self.logger.error(f"Failed to get vector store stats: {e}")
+            return {'error': str(e)}
 
 
 class MemoryService:
@@ -421,8 +565,16 @@ class MemoryService:
         return self.repository.get_by_id(memory_id)
     
     def search_memories(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
-        """Search memories."""
+        """Search memories using text search."""
         return self.repository.search(query, limit=limit)
+    
+    def semantic_search_memories(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """Search memories using semantic similarity."""
+        return self.repository.semantic_search(query, limit=limit)
+    
+    def hybrid_search_memories(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """Search memories using combined text + semantic search."""
+        return self.repository.hybrid_search(query, limit=limit)
     
     def list_recent_memories(self, limit: int = 20, offset: int = 0) -> List[Memory]:
         """Get recent memories."""
@@ -441,10 +593,20 @@ class MemoryService:
         return self.repository.count()
     
     def get_service_statistics(self) -> Dict[str, Any]:
-        """Get service statistics."""
+        """Get service statistics including vector store info."""
+        stats = {'total_memories': self.repository.count()}
+        
+        # Add repository stats if available
         if hasattr(self.repository, 'get_statistics'):
-            return self.repository.get_statistics()
-        return {'total_memories': self.repository.count()}
+            repo_stats = self.repository.get_statistics()
+            stats.update(repo_stats)
+        
+        # Add vector store stats if available
+        if hasattr(self.repository, 'get_vector_store_stats'):
+            vector_stats = self.repository.get_vector_store_stats()
+            stats['vector_store'] = vector_stats
+        
+        return stats
     
     def _generate_title(self, content: str, max_length: int = 50) -> str:
         """

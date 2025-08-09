@@ -253,9 +253,20 @@ class MemorySearchResult:
     """
     memory: Memory
     relevance_score: float = 0.0
-    match_type: str = "unknown"  # "fts", "vector", "hybrid"
+    match_type: str = "unknown"  # "fts", "semantic", "hybrid"
     matched_fields: List[str] = field(default_factory=list)
+    snippet: str = ""  # Content preview/snippet
     
+    @property
+    def memory_id(self) -> int:
+        """Convenience property to access memory ID."""
+        return self.memory.id
+    
+    @property  
+    def title(self) -> str:
+        """Convenience property to access memory title."""
+        return self.memory.title or ""
+        
     def __str__(self) -> str:
         return f"SearchResult(score={self.relevance_score:.3f}, {self.memory})"
 
