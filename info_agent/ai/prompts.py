@@ -83,6 +83,7 @@ Perform a complete analysis and return your results in the following JSON format
 }}
 
 Guidelines:
+- if the original text is chinese, keep extracted fields also in Chinese
 - Title: Be specific and descriptive, capture the main topic, avoid generic words
 - Description: Summarize 2-3 main points in complete sentences
 - Summary: Preserve the most important information while being concise
