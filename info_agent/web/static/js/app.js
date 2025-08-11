@@ -182,6 +182,9 @@ class InfoAgent {
             case 'status':
                 this.renderStatusView();
                 break;
+            case 'detail':
+                this.renderMemoryDetailView();
+                break;
             default:
                 this.renderMemoriesView();
         }
@@ -294,6 +297,44 @@ class InfoAgent {
             document.getElementById('status-content').innerHTML = this.renderSystemStatus(status);
         } catch (error) {
             document.getElementById('status-content').innerHTML = this.renderError('Failed to load system status');
+        }
+    }
+    
+    /**
+     * Render memory detail view
+     */
+    async renderMemoryDetailView() {
+        if (!this.currentMemoryId) {
+            this.navigateTo('memories');
+            return;
+        }
+        
+        const content = `
+            <div class="memory-detail-container">
+                <div class="memory-detail-header">
+                    <button class="btn btn-secondary" onclick="app.navigateTo('memories')">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Back to Memories
+                    </button>
+                    <h1>Memory Details</h1>
+                </div>
+                
+                <div id="memory-detail-content">
+                    ${this.renderLoading()}
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('main-content').innerHTML = content;
+        
+        try {
+            const memory = await this.fetchMemoryDetails(this.currentMemoryId);
+            document.getElementById('memory-detail-content').innerHTML = this.renderMemoryDetail(memory);
+        } catch (error) {
+            console.error('Error loading memory details:', error);
+            document.getElementById('memory-detail-content').innerHTML = this.renderError(`Failed to load memory details: ${error.message}`);
         }
     }
     
@@ -518,6 +559,20 @@ class InfoAgent {
     }
     
     /**
+     * Fetch individual memory details
+     */
+    async fetchMemoryDetails(memoryId) {
+        const response = await fetch(`${this.apiBaseUrl}/memories/${memoryId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            return data.data;
+        } else {
+            throw new Error(data.error?.message || 'Failed to fetch memory details');
+        }
+    }
+    
+    /**
      * Event Handlers
      */
     
@@ -549,12 +604,12 @@ class InfoAgent {
     }
     
     /**
-     * View memory details (placeholder for future implementation)
+     * View memory details
      */
-    viewMemoryDetails(memoryId) {
+    async viewMemoryDetails(memoryId) {
         console.log('View memory details:', memoryId);
-        // TODO: Implement memory details view
-        this.showInfo(`Memory details for ID ${memoryId} - Coming soon!`);
+        this.currentMemoryId = memoryId;
+        this.navigateTo('detail');
     }
     
     /**
@@ -650,6 +705,261 @@ class InfoAgent {
                 </div>
             </div>
         `;
+    }
+    
+    /**
+     * Render detailed memory information
+     */
+    renderMemoryDetail(memory) {
+        const createdDate = new Date(memory.created_at).toLocaleString();
+        const updatedDate = new Date(memory.updated_at).toLocaleString();
+        
+        // Extract dynamic fields for better display
+        const dynamicFields = memory.dynamic_fields || {};
+        const {
+            ai_processed,
+            ai_model,
+            ai_tokens_used,
+            categories,
+            category,
+            people,
+            places,
+            dates_times,
+            description,
+            summary,
+            tags,
+            priority,
+            status,
+            ...otherFields
+        } = dynamicFields;
+        
+        return `
+            <div class="memory-detail">
+                <!-- Main Memory Info -->
+                <div class="detail-section main-info">
+                    <div class="detail-header">
+                        <div class="memory-title-large">${this.escapeHtml(memory.title)}</div>
+                        <div class="memory-id-large">#${memory.id}</div>
+                    </div>
+                </div>
+                
+                <!-- Content Section -->
+                <div class="detail-section">
+                    <h3>📝 Content</h3>
+                    <div class="content-display">
+                        ${this.escapeHtml(memory.content).replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                
+                <!-- Metadata Section -->
+                <div class="detail-section">
+                    <h3>📊 Metadata</h3>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <label>Memory ID:</label>
+                            <span>${memory.id}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Word Count:</label>
+                            <span>${memory.word_count} words</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Content Hash:</label>
+                            <span class="hash">${memory.content_hash || 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Version:</label>
+                            <span>${memory.version || 1}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Created:</label>
+                            <span>${createdDate}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Updated:</label>
+                            <span>${updatedDate}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${ai_processed ? `
+                <!-- AI Processing Info -->
+                <div class="detail-section">
+                    <h3>🤖 AI Processing</h3>
+                    <div class="ai-info-grid">
+                        <div class="ai-info-item">
+                            <label>AI Processed:</label>
+                            <span class="status-badge success">✅ Yes</span>
+                        </div>
+                        ${ai_model ? `
+                        <div class="ai-info-item">
+                            <label>Model Used:</label>
+                            <span>${ai_model}</span>
+                        </div>
+                        ` : ''}
+                        ${ai_tokens_used ? `
+                        <div class="ai-info-item">
+                            <label>Tokens Used:</label>
+                            <span>${ai_tokens_used}</span>
+                        </div>
+                        ` : ''}
+                        ${description ? `
+                        <div class="ai-info-item">
+                            <label>AI Description:</label>
+                            <span>${this.escapeHtml(description)}</span>
+                        </div>
+                        ` : ''}
+                        ${summary ? `
+                        <div class="ai-info-item">
+                            <label>AI Summary:</label>
+                            <span>${this.escapeHtml(summary)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : `
+                <!-- No AI Processing -->
+                <div class="detail-section">
+                    <h3>🤖 AI Processing</h3>
+                    <div class="ai-info-item">
+                        <span class="status-badge neutral">⚪ Not AI processed</span>
+                        <p class="text-muted">This memory was created in basic mode without AI analysis.</p>
+                    </div>
+                </div>
+                `}
+                
+                ${(categories && categories.length) || category || (people && people.length) || (places && places.length) || (tags && tags.length) ? `
+                <!-- Extracted Information -->
+                <div class="detail-section">
+                    <h3>🏷️ Extracted Information</h3>
+                    <div class="extracted-info">
+                        ${(categories && categories.length) || category ? `
+                        <div class="info-group">
+                            <label>Categories:</label>
+                            <div class="tag-list">
+                                ${categories ? categories.map(cat => `<span class="tag category">${this.escapeHtml(cat)}</span>`).join('') : 
+                                  category ? `<span class="tag category">${this.escapeHtml(category)}</span>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${people && people.length ? `
+                        <div class="info-group">
+                            <label>People:</label>
+                            <div class="tag-list">
+                                ${people.map(person => `<span class="tag person">👤 ${this.escapeHtml(person)}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${places && places.length ? `
+                        <div class="info-group">
+                            <label>Places:</label>
+                            <div class="tag-list">
+                                ${places.map(place => `<span class="tag place">📍 ${this.escapeHtml(place)}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${dates_times && dates_times.length ? `
+                        <div class="info-group">
+                            <label>Dates & Times:</label>
+                            <div class="tag-list">
+                                ${dates_times.map(dt => `<span class="tag datetime">📅 ${this.escapeHtml(dt)}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${tags && tags.length ? `
+                        <div class="info-group">
+                            <label>Tags:</label>
+                            <div class="tag-list">
+                                ${tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${priority ? `
+                        <div class="info-group">
+                            <label>Priority:</label>
+                            <span class="priority-badge priority-${priority}">${priority.toUpperCase()}</span>
+                        </div>
+                        ` : ''}
+                        
+                        ${status ? `
+                        <div class="info-group">
+                            <label>Status:</label>
+                            <span class="status-badge">${this.escapeHtml(status)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${Object.keys(otherFields).length > 0 ? `
+                <!-- Additional Dynamic Fields -->
+                <div class="detail-section">
+                    <h3>🔧 Dynamic Fields</h3>
+                    <div class="dynamic-fields">
+                        ${Object.entries(otherFields).map(([key, value]) => `
+                            <div class="dynamic-field">
+                                <label>${this.escapeHtml(key)}:</label>
+                                <span>${typeof value === 'object' ? JSON.stringify(value) : this.escapeHtml(String(value))}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Actions -->
+                <div class="detail-actions">
+                    <button class="btn btn-secondary" onclick="app.navigateTo('memories')">
+                        Back to Memories
+                    </button>
+                    <button class="btn btn-primary" onclick="app.editMemory(${memory.id})">
+                        Edit Memory
+                    </button>
+                    <button class="btn btn-danger" onclick="app.deleteMemory(${memory.id})">
+                        Delete Memory
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Edit memory (placeholder)
+     */
+    editMemory(memoryId) {
+        this.showInfo(`Edit memory ${memoryId} - Coming in future update!`);
+    }
+    
+    /**
+     * Delete memory
+     */
+    async deleteMemory(memoryId) {
+        if (!confirm('Are you sure you want to delete this memory? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/memories/${memoryId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showSuccess('Memory deleted successfully!');
+                this.navigateTo('memories');
+                await this.loadMemories(); // Refresh the memories list
+            } else {
+                throw new Error(data.error?.message || 'Failed to delete memory');
+            }
+        } catch (error) {
+            console.error('Error deleting memory:', error);
+            this.showError(`Failed to delete memory: ${error.message}`);
+        }
     }
 }
 
