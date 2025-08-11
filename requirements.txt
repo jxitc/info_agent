@@ -25,6 +25,10 @@ flake8>=6.0.0
 numpy>=1.24.0
 pandas>=2.0.0
 
+# Web Framework
+flask>=2.3.0
+flask-cors>=4.0.0
+
 # Logging and Utilities
 python-dotenv>=1.0.0
 rich>=13.0.0  # For better CLI output formatting
