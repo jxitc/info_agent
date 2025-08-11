@@ -5,6 +5,7 @@ This module provides high-level database operations through a repository
 interface, abstracting database details from business logic.
 """
 
+import json
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from info_agent.core.models import Memory, MemorySearchResult
 from info_agent.core.database import DatabaseConnection, get_database
 from info_agent.core.migrations import DatabaseInitializer
 from info_agent.core.vector_store import VectorStore, get_vector_store
+from info_agent.ai.processor import MemoryProcessor, ProcessingError
 from info_agent.utils.logging_config import get_logger
 
 
@@ -528,32 +530,46 @@ class MemoryService:
         """
         self.logger = get_logger(__name__)
         self.repository = repository or SQLiteMemoryRepository()
+        
+        # Initialize AI processor (will throw exception if unavailable)
+        self.processor = MemoryProcessor()
+        self.ai_available = True
+        self.logger.info("AI processor initialized successfully")
     
     def add_memory(self, content: str, title: Optional[str] = None) -> Memory:
         """
-        Add a new memory with automatic processing.
+        Add a new memory with automatic AI processing and vector storage.
         
         Args:
             content: Memory content text
-            title: Optional title (will be generated if not provided)
+            title: Optional title (will be AI-generated if not provided)
             
         Returns:
-            Created Memory object
+            Created Memory object with AI-extracted fields
         """
         try:
-            # Create memory object
-            memory = Memory(
-                content=content.strip(),
-                title=title or self._generate_title(content)
+            self.logger.info(f"Adding memory with {len(content)} characters")
+            
+            # Process text with AI to extract structured information (required)
+            processed_memory = self.processor.process_text_to_memory(
+                text=content.strip(),
+                force_title=title
             )
+            self.logger.info(f"AI processing successful: '{processed_memory.title}'")
             
-            # TODO: Add AI processing for dynamic fields and summary
-            # This will be implemented in tasks 3.1 and 3.2
+            # Log detailed processing results
+            if processed_memory.dynamic_fields:
+                field_count = len(processed_memory.dynamic_fields)
+                field_names = list(processed_memory.dynamic_fields.keys())
+                self.logger.debug(f"Extracted {field_count} dynamic fields: {field_names}")
+                self.logger.debug(f"Full dynamic fields: {json.dumps(processed_memory.dynamic_fields, indent=2, default=str)}")
             
-            # Create in repository
-            created_memory = self.repository.create(memory)
-            self.logger.info(f"Added memory: '{created_memory.title}'")
+            # Create in database (this also adds to vector store automatically)
+            created_memory = self.repository.create(processed_memory)
+            self.logger.info(f"Memory stored in database with ID: {created_memory.id}")
+            self.logger.info(f"Memory automatically added to vector store during creation")
             
+            self.logger.info(f"Successfully added memory: '{created_memory.title}'")
             return created_memory
             
         except Exception as e:
@@ -573,8 +589,128 @@ class MemoryService:
         return self.repository.semantic_search(query, limit=limit)
     
     def hybrid_search_memories(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
-        """Search memories using combined text + semantic search."""
-        return self.repository.hybrid_search(query, limit=limit)
+        """Search memories using combined text + semantic search with AI query enhancement."""
+        try:
+            # Process query with AI to extract search criteria (required)
+            search_analysis = self.processor.process_search_query(query)
+            enhanced_query = search_analysis.get('enhanced_query', query)
+            self.logger.info(f"Enhanced search query: '{enhanced_query}'")
+            self.logger.debug(f"Search intent: {search_analysis.get('search_intent', 'Unknown')}")
+            
+            # Log detailed search analysis results
+            categories = search_analysis.get('categories', [])
+            people = search_analysis.get('people', [])
+            places = search_analysis.get('places', [])
+            field_filters = search_analysis.get('field_filters', {})
+            self.logger.debug(f"Extracted search criteria - Categories: {categories}, People: {people}, Places: {places}")
+            self.logger.debug(f"Field filters: {field_filters}")
+            self.logger.debug(f"Full search analysis: {json.dumps(search_analysis, indent=2, default=str)}")
+            
+            # Use enhanced query for hybrid search
+            results = self.repository.hybrid_search(enhanced_query, limit=limit)
+            
+            # Apply additional filtering based on extracted criteria
+            self.logger.debug(f"Applying filters to {len(results)} search results")
+            filtered_results = self._apply_search_filters(results, search_analysis, limit)
+            
+            self.logger.info(f"Smart hybrid search returned {len(filtered_results)} results")
+            return filtered_results
+                
+        except Exception as e:
+            self.logger.error(f"Hybrid search failed: {e}")
+            raise RepositoryError(f"Search operation failed: {e}")
+    
+    def _apply_search_filters(self, results: List[MemorySearchResult], analysis: Dict[str, Any], limit: int) -> List[MemorySearchResult]:
+        """Apply AI-extracted filters to search results."""
+        try:
+            filtered_results = []
+            
+            # Extract filter criteria
+            categories = analysis.get('categories', [])
+            people = analysis.get('people', [])
+            places = analysis.get('places', [])
+            field_filters = analysis.get('field_filters', {})
+            
+            for result in results:
+                should_include = True
+                
+                # Check category filters
+                if categories and result.memory.dynamic_fields:
+                    memory_categories = result.memory.dynamic_fields.get('categories', [])
+                    memory_category = result.memory.dynamic_fields.get('category', '')
+                    if memory_categories or memory_category:
+                        # Check if any memory category matches search categories
+                        all_memory_cats = memory_categories if isinstance(memory_categories, list) else []
+                        if memory_category:
+                            all_memory_cats.append(memory_category)
+                        
+                        category_match = any(
+                            any(search_cat.lower() in mem_cat.lower() or mem_cat.lower() in search_cat.lower() 
+                                for mem_cat in all_memory_cats)
+                            for search_cat in categories
+                        )
+                        if not category_match:
+                            should_include = False
+                
+                # Check people filters
+                if people and result.memory.dynamic_fields and should_include:
+                    memory_people = result.memory.dynamic_fields.get('people', [])
+                    if memory_people and isinstance(memory_people, list):
+                        people_match = any(
+                            any(search_person.lower() in mem_person.lower() or mem_person.lower() in search_person.lower()
+                                for mem_person in memory_people)
+                            for search_person in people
+                        )
+                        if not people_match:
+                            should_include = False
+                
+                # Check places filters
+                if places and result.memory.dynamic_fields and should_include:
+                    memory_places = result.memory.dynamic_fields.get('places', [])
+                    if memory_places and isinstance(memory_places, list):
+                        places_match = any(
+                            any(search_place.lower() in mem_place.lower() or mem_place.lower() in search_place.lower()
+                                for mem_place in memory_places)
+                            for search_place in places
+                        )
+                        if not places_match:
+                            should_include = False
+                
+                # Apply custom field filters
+                if field_filters and result.memory.dynamic_fields and should_include:
+                    for field_name, field_value in field_filters.items():
+                        memory_value = result.memory.dynamic_fields.get(field_name)
+                        if memory_value:
+                            if isinstance(memory_value, str):
+                                if field_value.lower() not in memory_value.lower():
+                                    should_include = False
+                                    break
+                            elif memory_value != field_value:
+                                should_include = False
+                                break
+                
+                if should_include:
+                    filtered_results.append(result)
+            
+            # Limit results and sort by relevance
+            filtered_results = filtered_results[:limit]
+            
+            # Log detailed filtering results
+            filtered_count = len(filtered_results)
+            excluded_count = len(results) - len(filtered_results)
+            self.logger.debug(f"Filter results: {filtered_count} included, {excluded_count} excluded")
+            self.logger.debug(f"Applied filters - Categories: {categories}, People: {people}, Places: {places}")
+            self.logger.debug(f"Field filters: {field_filters}")
+            
+            if filtered_results:
+                result_ids = [r.memory_id for r in filtered_results]
+                self.logger.debug(f"Final filtered memory IDs: {result_ids}")
+            
+            return filtered_results
+            
+        except Exception as e:
+            self.logger.warning(f"Filter application failed, returning unfiltered results: {e}")
+            return results[:limit]
     
     def list_recent_memories(self, limit: int = 20, offset: int = 0) -> List[Memory]:
         """Get recent memories."""

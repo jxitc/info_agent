@@ -14,6 +14,7 @@ from enum import Enum
 class PromptType(Enum):
     """Types of prompts available."""
     EXTRACT_ALL = "extract_all"  # Unified extraction for all information
+    SEARCH_ANALYSIS = "search_analysis"  # Search query analysis and enhancement
 
 
 class PromptTemplate:
@@ -95,6 +96,33 @@ Guidelines:
 )
 
 
+# Search query analysis prompt template
+SEARCH_ANALYSIS_TEMPLATE = PromptTemplate(
+    template="""Analyze this search query and extract structured search criteria.
+
+Search Query: "{query}"
+
+Return a JSON object with the following structure:
+{{
+    "enhanced_query": "optimized search terms for semantic search",
+    "field_filters": {{"field_name": "value"}},
+    "categories": ["category1", "category2"],
+    "people": ["person1", "person2"],
+    "places": ["place1", "place2"],
+    "date_hints": ["specific dates or time periods mentioned"],
+    "priority_level": "high/medium/low based on query urgency",
+    "search_intent": "brief description of what user is looking for"
+}}
+
+Guidelines:
+- enhanced_query should be keywords optimized for vector search
+- field_filters should map to common dynamic field names (category, people, places, etc.)
+- Extract any mentioned people, places, categories
+- Identify time/date references
+- Keep response concise and structured""",
+    required_vars=["query"]
+)
+
 
 class PromptManager:
     """Manager for handling prompt templates and generation."""
@@ -103,6 +131,7 @@ class PromptManager:
         """Initialize prompt manager with unified template."""
         self.templates = {
             PromptType.EXTRACT_ALL: EXTRACT_INFO_TEMPLATE,
+            PromptType.SEARCH_ANALYSIS: SEARCH_ANALYSIS_TEMPLATE,
         }
     
     def get_prompt(self, prompt_type: PromptType, **kwargs) -> str:
@@ -158,3 +187,19 @@ def extract_all_information_prompt(text: str) -> str:
     """
     manager = PromptManager()
     return manager.get_prompt(PromptType.EXTRACT_ALL, text=text)
+
+
+def search_analysis_prompt(query: str) -> str:
+    """Generate prompt for search query analysis and enhancement.
+    
+    Analyzes search queries to extract structured criteria like categories,
+    people, places, and enhanced search terms for better search results.
+    
+    Args:
+        query: Search query to analyze
+        
+    Returns:
+        Formatted search analysis prompt
+    """
+    manager = PromptManager()
+    return manager.get_prompt(PromptType.SEARCH_ANALYSIS, query=query)

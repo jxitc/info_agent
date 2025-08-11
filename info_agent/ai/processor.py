@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from .client import OpenAIClient, OpenAIClientError
-from .prompts import extract_all_information_prompt
+from .prompts import extract_all_information_prompt, search_analysis_prompt
 from ..core.models import Memory
 
 
@@ -165,6 +165,51 @@ class MemoryProcessor:
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             return None
+    
+    def process_search_query(self, query: str) -> Dict[str, Any]:
+        """Process a search query to extract structured search criteria.
+        
+        Args:
+            query: Natural language search query
+            
+        Returns:
+            Dictionary with extracted search criteria including:
+            - enhanced_query: Improved search query
+            - field_filters: Dynamic field filters to apply
+            - date_filters: Date range filters
+            - categories: Relevant categories
+            
+        Raises:
+            ProcessingError: If processing fails
+        """
+        logger.info(f"Processing search query: '{query}'")
+        
+        try:
+            # Generate search analysis prompt using centralized template
+            prompt = search_analysis_prompt(query)
+
+            # Call AI for analysis
+            logger.debug("Calling AI for search query analysis")
+            response = self.ai_client.chat_completion([{"role": "user", "content": prompt}])
+            
+            if not response.success:
+                raise ProcessingError(f"Search query analysis failed: {response.error}")
+            
+            # Parse JSON response (required)
+            try:
+                analysis = json.loads(response.content)
+                logger.info(f"Search query analysis successful: {analysis.get('search_intent', 'Unknown intent')}")
+                logger.debug(f"Full search analysis: {json.dumps(analysis, indent=2)}")
+                return analysis
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse search analysis as JSON: {e}")
+                logger.debug(f"Raw response: {response.content}")
+                raise ProcessingError(f"Invalid JSON response from AI during search analysis: {e}")
+                
+        except Exception as e:
+            logger.error(f"Search query processing error: {e}")
+            raise ProcessingError(f"Search query processing failed: {e}")
     
     def test_connection(self) -> bool:
         """Test if AI client connection is working.

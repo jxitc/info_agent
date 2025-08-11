@@ -20,6 +20,7 @@ from info_agent.cli.validators import (
 )
 from info_agent.cli.help import add_help_commands
 from info_agent.core.repository import get_memory_service, RepositoryError
+from info_agent.ai.processor import ProcessingError
 from info_agent.core.vector_store import VectorStore, VectorStoreConfig
 from info_agent.core.models import Memory
 
@@ -104,21 +105,11 @@ def add(ctx, text: str):
         click.echo(f"📝 Text: {validated_text[:100]}{'...' if len(validated_text) > 100 else ''}")
         
         try:
-            # Add memory using service (with simple mocked dynamic fields)
+            # Add memory using service with AI processing
             memory = ctx.obj.memory_service.add_memory(
                 content=validated_text,
-                title=None  # Auto-generate title
+                title=None  # Auto-generate title via AI
             )
-            
-            # Mock some simple dynamic fields for testing
-            if memory:
-                memory.dynamic_fields = {
-                    "category": "general",
-                    "word_count": len(validated_text.split()),
-                    "status": "created"
-                }
-                # Update with mocked fields
-                ctx.obj.memory_service.update_memory(memory)
             
             click.echo("✅ Memory created successfully!")
             click.echo(f"📋 Memory ID: {memory.id}")
@@ -159,13 +150,53 @@ def search(ctx, query: str, limit: int):
         
         logger.info(f"Searching for: '{validated_query}' (limit: {validated_limit})")
         
-        # TODO: Implement search logic
         click.echo(f"🔍 Searching for: '{validated_query}'")
         click.echo(f"📊 Limit: {validated_limit} results")
+        click.echo("")
         
-        # Placeholder implementation
-        click.echo("❌ Search functionality not yet implemented")
-        click.echo("💡 This will be implemented in tasks 4.2 and 3.1")
+        # Perform hybrid search (semantic + structured)
+        try:
+            results = ctx.obj.memory_service.hybrid_search_memories(
+                query=validated_query,
+                limit=validated_limit
+            )
+            
+            if not results:
+                click.echo("📭 No matching memories found.")
+                click.echo("💡 Try different keywords or add more memories first.")
+                return
+            
+            click.echo(f"✅ Found {len(results)} results:")
+            click.echo("")
+            
+            # Display search results
+            for i, result in enumerate(results, 1):
+                # Format relevance score
+                score_display = f"{result.relevance_score:.3f}" if result.relevance_score else "N/A"
+                
+                click.echo(f"{i}. 🆔 ID: {result.memory_id} | 📊 Score: {score_display}")
+                click.echo(f"   🏷️  Title: {result.title}")
+                click.echo(f"   📝 Snippet: {result.snippet}")
+                
+                # Show search type if available
+                if hasattr(result, 'search_type'):
+                    click.echo(f"   🔍 Type: {result.search_type}")
+                
+                click.echo("   " + "-" * 60)
+            
+            click.echo("")
+            click.echo(f"💡 Use 'show <id>' to see full details for any memory.")
+            
+        except RepositoryError as e:
+            logger.error(f"Repository error during search: {e}")
+            click.echo(f"❌ Search failed: {e}")
+        except ProcessingError as e:
+            logger.error(f"AI processing error during search: {e}")
+            click.echo(f"❌ AI processing failed: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during search: {e}")
+            click.echo(f"❌ Unexpected error: {e}")
+            raise
         
     except click.BadParameter as e:
         logger.error(f"Input validation error: {e}")
