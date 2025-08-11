@@ -531,10 +531,16 @@ class MemoryService:
         self.logger = get_logger(__name__)
         self.repository = repository or SQLiteMemoryRepository()
         
-        # Initialize AI processor (will throw exception if unavailable)
-        self.processor = MemoryProcessor()
-        self.ai_available = True
-        self.logger.info("AI processor initialized successfully")
+        # Initialize AI processor (gracefully handle unavailability)
+        try:
+            self.processor = MemoryProcessor()
+            self.ai_available = True
+            self.logger.info("AI processor initialized successfully")
+        except Exception as e:
+            self.processor = None
+            self.ai_available = False
+            self.logger.warning(f"AI processor unavailable: {e}")
+            self.logger.info("Service will operate in basic mode without AI features")
     
     def add_memory(self, content: str, title: Optional[str] = None) -> Memory:
         """
@@ -550,24 +556,40 @@ class MemoryService:
         try:
             self.logger.info(f"Adding memory with {len(content)} characters")
             
-            # Process text with AI to extract structured information (required)
-            processed_memory = self.processor.process_text_to_memory(
-                text=content.strip(),
-                force_title=title
-            )
-            self.logger.info(f"AI processing successful: '{processed_memory.title}'")
-            
-            # Log detailed processing results
-            if processed_memory.dynamic_fields:
-                field_count = len(processed_memory.dynamic_fields)
-                field_names = list(processed_memory.dynamic_fields.keys())
-                self.logger.debug(f"Extracted {field_count} dynamic fields: {field_names}")
-                self.logger.debug(f"Full dynamic fields: {json.dumps(processed_memory.dynamic_fields, indent=2, default=str)}")
+            if self.ai_available and self.processor:
+                # Process text with AI to extract structured information
+                processed_memory = self.processor.process_text_to_memory(
+                    text=content.strip(),
+                    force_title=title
+                )
+                self.logger.info(f"AI processing successful: '{processed_memory.title}'")
+                
+                # Log detailed processing results
+                if processed_memory.dynamic_fields:
+                    field_count = len(processed_memory.dynamic_fields)
+                    field_names = list(processed_memory.dynamic_fields.keys())
+                    self.logger.debug(f"Extracted {field_count} dynamic fields: {field_names}")
+                    self.logger.debug(f"Full dynamic fields: {json.dumps(processed_memory.dynamic_fields, indent=2, default=str)}")
+            else:
+                # Create basic memory without AI processing
+                self.logger.info("AI unavailable - creating basic memory without processing")
+                from info_agent.core.models import Memory
+                processed_memory = Memory(
+                    content=content.strip(),
+                    title=title or self._generate_title(content.strip())
+                )
+                # Add basic dynamic fields
+                processed_memory.dynamic_fields = {
+                    'category': 'general',
+                    'ai_processed': False,
+                    'created_method': 'basic'
+                }
             
             # Create in database (this also adds to vector store automatically)
             created_memory = self.repository.create(processed_memory)
             self.logger.info(f"Memory stored in database with ID: {created_memory.id}")
-            self.logger.info(f"Memory automatically added to vector store during creation")
+            if self.ai_available:
+                self.logger.info(f"Memory automatically added to vector store during creation")
             
             self.logger.info(f"Successfully added memory: '{created_memory.title}'")
             return created_memory

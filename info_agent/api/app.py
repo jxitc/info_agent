@@ -6,7 +6,7 @@ blueprints, error handlers, and middleware.
 """
 
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
 
 from info_agent.utils.logging_config import setup_logging, get_logger
@@ -16,7 +16,14 @@ from info_agent.ai.processor import ProcessingError
 
 def create_app(config=None):
     """Create and configure the Flask application."""
-    app = Flask(__name__)
+    # Set up template and static folders for web interface
+    web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
+    template_dir = os.path.join(web_dir, 'templates')
+    static_dir = os.path.join(web_dir, 'static')
+    
+    app = Flask(__name__, 
+                template_folder=template_dir,
+                static_folder=static_dir)
     
     # Basic configuration
     app.config.update({
@@ -60,6 +67,45 @@ def create_app(config=None):
             'service': 'info-agent-api',
             'version': '0.1.0'
         })
+    
+    # Web interface routes
+    @app.route('/')
+    def index():
+        """Serve the main web interface."""
+        try:
+            # Debug: log the paths being used
+            logger.debug(f"Template dir: {template_dir}")
+            logger.debug(f"Static dir: {static_dir}")
+            logger.debug(f"Template exists: {os.path.exists(os.path.join(template_dir, 'index.html'))}")
+            
+            template_path = os.path.join(template_dir, 'index.html')
+            if os.path.exists(template_path):
+                with open(template_path, 'r') as f:
+                    return f.read()
+            else:
+                logger.error(f"Template file not found at: {template_path}")
+                raise FileNotFoundError(f"Template not found: {template_path}")
+                
+        except Exception as e:
+            logger.error(f"Error serving web interface: {e}")
+            return jsonify({
+                'error': 'Web interface not found',
+                'message': f'The web interface files are not available: {str(e)}. API endpoints are still accessible at /api/v1/',
+                'template_path': template_dir,
+                'static_path': static_dir
+            }), 404
+    
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        """Serve static files for the web interface."""
+        try:
+            static_path = os.path.join(static_dir, filename)
+            logger.debug(f"Serving static file: {static_path}")
+            logger.debug(f"File exists: {os.path.exists(static_path)}")
+            return send_from_directory(static_dir, filename)
+        except Exception as e:
+            logger.error(f"Error serving static file {filename}: {e}")
+            return jsonify({'error': f'Static file not found: {filename}'}), 404
     
     logger.info(f"Flask app created with debug={app.config['DEBUG']}")
     return app
