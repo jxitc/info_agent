@@ -51,35 +51,59 @@ The AI Agent acts as a personal assistant that:
 
 Following the architectural discussion in `docs/discussion.md`, we implement independent MCP tools that agents can compose:
 
-#### Core Memory Tools
+#### Triple Retrieval MCP Tools
 
 ```python
-# 1. Structured Query Tool
+# 1. Structured Query Tool (Relational Database)
 @mcp_tool
-def query_memories_by_criteria(
+def query_memories_structured(
     date_range: Optional[DateRange] = None,
     categories: Optional[List[str]] = None,
     tags: Optional[List[str]] = None,
-    limit: int = 10
-) -> List[Memory]:
-    """Query memories using structured criteria"""
+    limit: int = 10,
+    confidence_threshold: float = 0.5
+) -> List[StructuredMemoryResult]:
+    """Query memories using structured criteria from SQLite"""
     
-# 2. Semantic Search Tool  
+# 2. Semantic Search Tool (Vector Database)
 @mcp_tool
-def find_similar_memories(
+def query_memories_semantic(
     query_text: str,
     similarity_threshold: float = 0.7,
     limit: int = 5
-) -> List[MemorySearchResult]:
-    """Find semantically similar memories using embeddings"""
+) -> List[SemanticMemoryResult]:
+    """Find semantically similar memories using ChromaDB embeddings"""
     
-# 3. Entity Extraction Tool
+# 3. Knowledge Graph Query Tool (Neo4j)
 @mcp_tool
-def extract_entities_from_memories(
-    entity_types: List[str],  # ["person", "date", "phone", "email", "document_id"]
-    query: Optional[str] = None
-) -> Dict[str, List[Entity]]:
-    """Extract specific entities from memories"""
+def query_memories_graph(
+    query_text: str,
+    relationship_types: Optional[List[str]] = None,
+    entity_filters: Optional[Dict[str, str]] = None,
+    max_hops: int = 2,
+    limit: int = 5
+) -> List[GraphMemoryResult]:
+    """Query memories using knowledge graph relationships and entities"""
+
+# 4. Triple Retrieval Orchestrator Tool
+@mcp_tool
+def query_memories_hybrid(
+    query_text: str,
+    sources: List[str] = ["structured", "semantic", "graph"],
+    use_adaptive_thresholds: bool = True,
+    max_results: int = 10
+) -> List[RankedMemoryResult]:
+    """Orchestrate parallel queries across all three sources with RRF ranking"""
+
+# 5. Entity Extraction & KG Construction Tool
+@mcp_tool
+def extract_and_store_entities(
+    memory_text: str,
+    memory_id: int,
+    entity_types: List[str] = ["person", "location", "time", "organization"],
+    store_in_graph: bool = True
+) -> EntityExtractionResult:
+    """Extract entities and relationships, store in knowledge graph"""
 ```
 
 #### Specialized Assistant Tools
@@ -121,56 +145,70 @@ def get_contact_context(
 #### Specialized Sub-Agents
 
 1. **Schedule Agent**
-   - **Role**: Calendar management, meeting coordination
-   - **Tools**: Schedule conflict checker, contact manager, structured query
+   - **Role**: Calendar management, meeting coordination, conflict resolution
+   - **Tools**: Triple retrieval hybrid, graph relationship queries, schedule conflict checker
+   - **KG Capability**: "Who has availability for meetings with the API team next week?"
    
 2. **Information Agent**  
-   - **Role**: Document retrieval, fact finding
-   - **Tools**: Entity extraction, semantic search, document retriever
+   - **Role**: Document retrieval, fact finding, entity disambiguation
+   - **Tools**: All three retrieval sources, entity extraction, document retriever
+   - **KG Capability**: "Find my passport info and related travel documents"
    
 3. **Context Agent**
-   - **Role**: Background research, relationship mapping
-   - **Tools**: Semantic search, contact manager, structured query
+   - **Role**: Relationship mapping, historical context, pattern discovery
+   - **Tools**: Knowledge graph queries, semantic search, temporal analysis
+   - **KG Capability**: "Show me connections between John, the API project, and recent meetings"
 
 ## Implementation Phases
 
-### Phase 1: Core MCP Tools (Post-M0)
-- [ ] Refactor existing repository into independent MCP tools
-- [ ] Implement structured query tool with advanced filtering
-- [ ] Enhance semantic search with entity-aware embeddings
-- [ ] Add entity extraction tool for common document types
+### Phase 1: Triple Retrieval MCP Foundation (Post-M0)
+- [ ] Refactor existing repository into triple retrieval MCP tools
+- [ ] Implement structured query tool (SQLite) with advanced filtering
+- [ ] Enhance semantic search tool (ChromaDB) with confidence scoring
+- [ ] Add knowledge graph tool (Neo4j) with entity/relationship extraction
+- [ ] Create hybrid orchestrator tool with RRF ranking
 
-### Phase 2: Basic Agent Framework
-- [ ] Implement primary personal assistant agent
-- [ ] Add request classification and tool routing
-- [ ] Create response synthesis and formatting
-- [ ] Test with simple use cases (document retrieval, basic search)
+### Phase 2: Evaluation & Optimization Framework
+- [ ] Implement comprehensive evaluation pipeline (RAGAS, NDCG, MRR)
+- [ ] Create A/B testing framework for retrieval approaches
+- [ ] Add KG-specific metrics (entity accuracy, relationship quality)
+- [ ] Build ground truth generation with LLM assistance
+- [ ] Implement adaptive threshold optimization
 
-### Phase 3: Specialized Agents
-- [ ] Implement schedule management agent
-- [ ] Add advanced conflict detection and suggestion logic
-- [ ] Create information retrieval agent with smart entity extraction
-- [ ] Implement context agent for relationship and history mapping
+### Phase 3: Basic Agent Framework with Smart Routing
+- [ ] Implement personal assistant agent with LangGraph orchestration
+- [ ] Add intelligent source routing (when to use which retrieval method)
+- [ ] Create request classification with relationship/entity detection
+- [ ] Build response synthesis with confidence communication
+- [ ] Test with complex use cases (multi-hop queries, relationship discovery)
 
-### Phase 4: Advanced Capabilities
-- [ ] Add proactive suggestions and reminders
-- [ ] Implement learning from user feedback
-- [ ] Add cross-memory pattern recognition
-- [ ] Create conversational context persistence
+### Phase 4: Specialized Multi-Agent System
+- [ ] Implement schedule management agent with graph relationship queries
+- [ ] Add information retrieval agent with entity disambiguation
+- [ ] Create context agent for temporal relationship mapping
+- [ ] Build proactive suggestion system using graph centrality
+
+### Phase 5: Advanced Learning & Optimization
+- [ ] Add continuous evaluation and model improvement
+- [ ] Implement user feedback integration for ranking optimization
+- [ ] Create cross-memory pattern recognition using graph algorithms
+- [ ] Build conversational context with entity/relationship persistence
 
 ## Technical Considerations
 
 ### MCP Integration Strategy
 
 ```python
-# Agent orchestration with MCP tools
+# Agent orchestration with triple retrieval MCP tools
 class PersonalAssistantAgent:
     def __init__(self, mcp_client):
         self.mcp = mcp_client
         self.available_tools = [
-            "query_memories_by_criteria",
-            "find_similar_memories", 
-            "extract_entities_from_memories",
+            "query_memories_structured",
+            "query_memories_semantic",
+            "query_memories_graph", 
+            "query_memories_hybrid",
+            "extract_and_store_entities",
             "check_schedule_conflicts",
             "find_document_info",
             "get_contact_context"
@@ -215,26 +253,29 @@ class AgentCoordinator:
         return self.merge_agent_responses(agent_results)
 ```
 
-### Data Flow Architecture
+### Triple Retrieval Data Flow Architecture
 
 ```
-User Request
+User Request ("Who did I meet about the API project last week?")
     ↓
-Personal Assistant Agent
+Personal Assistant Agent (LangGraph orchestration)
     ↓
-Request Classification
+Smart Source Routing & Query Classification
+    ↓ (parallel execution)
+┌──────────────────┬──────────────────┬──────────────────┐
+│  MCP Tool 1      │  MCP Tool 2      │  MCP Tool 3      │
+│  (SQL Structured │  (Vector Semantic│  (Neo4j Graph    │
+│   Query)         │   Search)        │   Relationships) │
+│  - time filters  │  - "API project" │  - Person→MEETS  │
+│  - last week     │  - meetings      │  - Project→API   │
+└──────────────────┴──────────────────┴──────────────────┘
     ↓
-Tool Selection & Planning
-    ↓ (parallel)
-┌─────────────────┬─────────────────┬─────────────────┐
-│  MCP Tool 1     │  MCP Tool 2     │  Specialized    │
-│  (Structured    │  (Semantic      │  Agent          │
-│   Query)        │   Search)       │  (Schedule)     │
-└─────────────────┴─────────────────┴─────────────────┘
+Triple RRF Ranking & Confidence Scoring
     ↓
-Result Aggregation & Synthesis
+Result Synthesis with Source Diversity & Entity Context
     ↓
-Formatted Response to User
+Formatted Response: "You met with Sarah and John about the API project last Tuesday. 
+Sarah discussed authentication features (high confidence), John mentioned testing concerns (medium confidence)."
 ```
 
 ## Example Interactions
