@@ -1,7 +1,7 @@
 # Context Retrieval Design & Evaluation
 
 ## Problem Statement
-- Triple retrieval system combining relational database (SQLite) + vector database (ChromaDB) + knowledge graph (Neo4j)
+- Triple retrieval system combining relational database (SQLite) + vector database (ChromaDB) + knowledge graph (SQLite-based)
 - Need intelligent threshold filtering and confidence ranking across three sources
 - Require comprehensive evaluation framework for recall/coverage
 
@@ -17,9 +17,9 @@
 - ✅ Semantic understanding, fuzzy matching, natural language queries
 - ❌ Approximation, expensive computation, no exact filtering
 
-**Knowledge Graph (Neo4j):**
-- ✅ Rich relationship modeling, multi-hop queries, entity disambiguation, graph algorithms
-- ❌ Construction complexity, query performance overhead, maintenance burden
+**Knowledge Graph (SQLite-based):**
+- ✅ Rich relationship modeling, multi-hop queries, entity disambiguation, leverages existing infrastructure
+- ❌ Complex SQL for graph traversal, limited graph algorithms, performance for deep queries
 
 ## Threshold & Ranking Strategies
 
@@ -139,7 +139,7 @@ def query_memories_semantic(query_text, threshold) -> List[SemanticMemoryResult]
 
 @mcp_tool
 def query_memories_graph(query_text, relationship_filters) -> List[GraphMemoryResult]:
-    """Neo4j-based knowledge graph relationship queries"""
+    """SQLite-based knowledge graph relationship queries with recursive CTEs"""
 
 @mcp_tool
 def query_memories_hybrid(query_text, sources, use_rrf=True) -> List[RankedMemoryResult]:
@@ -333,29 +333,119 @@ def compare_retrieval_approaches():
 
 ## Knowledge Graph Implementation
 
+### SQLite-Based Graph Storage
+```sql
+-- Extend existing SQLite schema with relationship tables
+CREATE TABLE entities (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    entity_type TEXT NOT NULL, -- 'person', 'location', 'organization', 'time'
+    memory_id INTEGER,
+    confidence REAL DEFAULT 1.0,
+    FOREIGN KEY (memory_id) REFERENCES memories(id)
+);
+
+CREATE TABLE relationships (
+    id INTEGER PRIMARY KEY,
+    from_entity_id INTEGER,
+    to_entity_id INTEGER,
+    relation_type TEXT NOT NULL, -- 'MEETS', 'LOCATED_AT', 'WORKS_ON'
+    memory_id INTEGER,
+    confidence REAL DEFAULT 1.0,
+    FOREIGN KEY (from_entity_id) REFERENCES entities(id),
+    FOREIGN KEY (to_entity_id) REFERENCES entities(id),
+    FOREIGN KEY (memory_id) REFERENCES memories(id)
+);
+
+CREATE INDEX idx_entities_name ON entities(name);
+CREATE INDEX idx_relationships_from ON relationships(from_entity_id);
+CREATE INDEX idx_relationships_to ON relationships(to_entity_id);
+```
+
 ### KG Construction Pipeline
 ```python
-class MemoryKnowledgeGraph:
+class SQLiteKnowledgeGraph:
+    def __init__(self, db_connection):
+        self.db = db_connection
+        self.llm_client = OpenAIClient()
+    
     def extract_and_store_memory(self, memory_text, memory_id):
         # LLM-based entity/relation extraction
         extraction_prompt = f"""
         Extract entities and relationships from: "{memory_text}"
         Example: "Xiao will meet Lijie at college hall tomorrow"
         
-        Entities: [Xiao:Person, Lijie:Person, college_hall:Location, tomorrow:Time]
-        Relationships: [(Xiao, MEETS, Lijie), (meeting, LOCATED_AT, college_hall)]
+        Return JSON:
+        {{
+            "entities": [
+                {{"name": "Xiao", "type": "person"}},
+                {{"name": "Lijie", "type": "person"}},
+                {{"name": "college_hall", "type": "location"}}
+            ],
+            "relationships": [
+                {{"from": "Xiao", "relation": "MEETS", "to": "Lijie"}},
+                {{"from": "meeting", "relation": "LOCATED_AT", "to": "college_hall"}}
+            ]
+        }}
         """
         
         extracted_data = self.llm_client.extract(extraction_prompt)
-        self.create_memory_subgraph(extracted_data, memory_id)
+        self._store_entities_and_relationships(extracted_data, memory_id)
     
     def search_knowledge_graph(self, query):
         strategies = [
-            self.entity_match_search(query),      # Direct entity matching
-            self.relationship_traversal_search(query),  # Multi-hop queries
-            self.community_detection_search(query)      # Graph clustering
+            self._entity_match_search(query),      # Direct entity matching
+            self._relationship_traversal_search(query),  # Multi-hop SQL queries
+            self._entity_co_occurrence_search(query)     # Entities appearing together
         ]
-        return self.combine_and_rank(strategies)
+        return self._combine_and_rank(strategies)
+    
+    def _relationship_traversal_search(self, query, max_hops=2):
+        """Multi-hop relationship search using recursive CTEs"""
+        
+        # Extract entities from query
+        query_entities = self._extract_entities_from_text(query)
+        
+        results = []
+        for entity in query_entities:
+            # Recursive CTE for multi-hop traversal
+            sql = """
+            WITH RECURSIVE entity_connections(entity_id, related_entity_id, relation_path, hop_count) AS (
+                -- Base case: direct connections
+                SELECT e1.id, e2.id, r.relation_type, 1
+                FROM entities e1
+                JOIN relationships r ON e1.id = r.from_entity_id
+                JOIN entities e2 ON r.to_entity_id = e2.id
+                WHERE e1.name = ?
+                
+                UNION ALL
+                
+                -- Recursive case: extend path
+                SELECT ec.entity_id, e.id, 
+                       ec.relation_path || '->' || r.relation_type, 
+                       ec.hop_count + 1
+                FROM entity_connections ec
+                JOIN relationships r ON ec.related_entity_id = r.from_entity_id
+                JOIN entities e ON r.to_entity_id = e.id
+                WHERE ec.hop_count < ?
+            )
+            SELECT DISTINCT 
+                e.name as related_entity,
+                ec.relation_path,
+                ec.hop_count,
+                m.id as memory_id,
+                m.title,
+                m.content
+            FROM entity_connections ec
+            JOIN entities e ON ec.related_entity_id = e.id
+            JOIN memories m ON e.memory_id = m.id
+            ORDER BY ec.hop_count, e.name;
+            """
+            
+            cursor = self.db.execute(sql, (entity, max_hops))
+            results.extend(cursor.fetchall())
+        
+        return results
 ```
 
 ### Scalability Assessment
@@ -363,23 +453,65 @@ class MemoryKnowledgeGraph:
 - **Query Types**: 2-3 hop relationship traversals
 - **Use Cases**: "Who have I met through John?", "What projects involve Sarah and APIs?"
 
-### Implementation Priority
-1. **Phase 1**: Basic dual RRF (SQL + Vector) with fixed thresholds
-2. **Phase 2**: Add Knowledge Graph with entity/relation extraction
-3. **Phase 3**: Triple RRF with adaptive thresholds and smart routing
-4. **Phase 4**: Enhanced confidence scoring with KG factors
-5. **Phase 5**: Comprehensive evaluation pipeline with KG-specific metrics
-6. **Phase 6**: Advanced graph algorithms and temporal relationships
+### Implementation Priority & Technology Evolution
+
+#### Phase 1: SQLite-Based Graph (Recommended Start)
+1. **Phase 1A**: Basic dual RRF (SQL + Vector) with fixed thresholds
+2. **Phase 1B**: Add SQLite-based KG with entity/relation extraction
+3. **Phase 1C**: Triple RRF with adaptive thresholds and smart routing
+4. **Phase 1D**: Enhanced confidence scoring with KG factors
+
+**Advantages**: 
+- Builds on existing SQLite infrastructure
+- No additional dependencies or database management
+- Sufficient for personal scale (1K-100K memories)
+- Easy deployment and backup
+
+#### Phase 2: Neo4j Migration (Future Enhancement)
+5. **Phase 2A**: Evaluate SQLite KG performance at scale
+6. **Phase 2B**: Migrate to Neo4j if complex graph algorithms needed
+7. **Phase 2C**: Leverage Neo4j LLM Graph Builder ecosystem
+8. **Phase 2D**: Advanced graph analytics and community detection
+
+**Migration Triggers**:
+- Multi-hop queries become performance bottlenecks (>3 hops)
+- Need for advanced graph algorithms (PageRank, community detection)
+- Desire to use Neo4j's LLM ecosystem tools
+- Scale exceeds 100K memories with complex relationships
 
 ## Next Steps
+
+### Immediate Implementation (Phase 1)
 - Implement basic dual RRF hybrid search in `info_agent/core/search_engine.py`
-- Add Knowledge Graph integration with Neo4j and LLM entity extraction
+- Add SQLite schema extensions for entities and relationships tables
+- Create LLM-based entity/relation extraction pipeline
+- Build SQLite-based KG query functions with recursive CTEs
 - Create triple retrieval evaluation module in `info_agent/evaluation/`
-- Build KG construction pipeline with entity/relation extraction
 - Add enhanced confidence scoring with KG-specific factors
 - Integration with existing CLI/API endpoints for triple search
 
+### Future Considerations (Phase 2)
+- Evaluate Neo4j migration based on performance and complexity needs
+- Leverage Neo4j LLM Graph Builder if migrating
+- Advanced graph algorithms for community detection and centrality
+- Integration with GraphRAG ecosystem tools
+
+## Technology Comparison
+
+| Aspect | SQLite-based KG | Neo4j KG |
+|---------|-----------------|----------|
+| **Setup Complexity** | Minimal (extend existing) | High (new database) |
+| **Dependencies** | None (existing SQLite) | Neo4j server + drivers |
+| **Query Complexity** | High (complex SQL CTEs) | Low (intuitive Cypher) |
+| **Performance (1K-10K)** | Excellent | Good |
+| **Performance (100K+)** | Limited | Excellent |
+| **Graph Algorithms** | Manual implementation | Built-in library |
+| **LLM Integration** | Manual | Rich ecosystem |
+| **Deployment** | Simple | Complex |
+| **Migration Path** | Export to Neo4j later | N/A |
+
 ## References
+- **SQLite Graph Techniques**: Recursive CTEs, graph traversal in SQL
 - **Traditional KG**: Named Entity Recognition, Relation Extraction, crowdsourcing approaches
 - **Modern LLM-KG**: Neo4j LLM Graph Builder, GraphRAG (Microsoft), LangChain LLMGraphTransformer
 - **Evaluation**: RAGAS framework, ARES, Azure RRF, NDCG/MRR metrics
