@@ -187,6 +187,45 @@ This document breaks down the M0 prototype development into concrete, independen
 - [ ] 10.2.5 Set up web server configuration
 - [ ] 10.2.6 Create deployment scripts
 
+## 11. MCP & Agent Foundation **[NEW - HIGH PRIORITY]**
+
+### 11.1 MCP Tools Refactoring
+- [ ] 11.1.1 Install MCP dependencies (mcp, langgraph, langchain-core)
+- [ ] 11.1.2 Create MCP server structure and configuration
+- [ ] 11.1.3 Refactor existing search functions into MCP tools:
+  - [ ] 11.1.3a Convert database structured query to MCP tool
+  - [ ] 11.1.3b Convert vector semantic search to MCP tool  
+  - [ ] 11.1.3c Create hybrid orchestrator MCP tool for RRF ranking
+- [ ] 11.1.4 Add MCP tool metadata and schemas for type safety
+- [ ] 11.1.5 Create MCP client wrapper for tool invocation
+- [ ] 11.1.6 Test MCP tools independently (unit tests)
+
+### 11.2 LangGraph Agent Framework
+- [ ] 11.2.1 Design basic workflow graph for query processing
+- [ ] 11.2.2 Implement query classification node (schedule/document/general)
+- [ ] 11.2.3 Create source routing node (which MCP tools to use)
+- [ ] 11.2.4 Build parallel retrieval execution node
+- [ ] 11.2.5 Add result synthesis and response formatting node
+- [ ] 11.2.6 Create simple state management for workflow context
+- [ ] 11.2.7 Test basic LangGraph workflow with MCP integration
+
+### 11.3 Enhanced Ranking & Evaluation
+- [ ] 11.3.1 Implement Reciprocal Rank Fusion (RRF) for multi-source results
+- [ ] 11.3.2 Add adaptive threshold logic based on query characteristics
+- [ ] 11.3.3 Create confidence scoring system for combined results
+- [ ] 11.3.4 Build basic evaluation framework with RAGAS metrics
+- [ ] 11.3.5 Add source diversity scoring and result deduplication
+- [ ] 11.3.6 Create A/B testing framework for different retrieval approaches
+
+### 11.4 Knowledge Graph Foundation (SQLite-based)
+- [ ] 11.4.1 Design SQLite schema extensions for entities and relationships
+- [ ] 11.4.2 Implement LLM-based entity extraction from memory text
+- [ ] 11.4.3 Create relationship extraction and graph construction pipeline
+- [ ] 11.4.4 Build SQLite knowledge graph query functions with recursive CTEs
+- [ ] 11.4.5 Add KG-specific MCP tool for relationship/entity queries
+- [ ] 11.4.6 Integrate KG into triple retrieval system (SQL + Vector + Graph)
+- [ ] 11.4.7 Test multi-hop relationship queries and entity disambiguation
+
 ## Dependencies & Ordering
 
 ### Phase 1 (Foundation) ✅ **COMPLETED**
@@ -198,17 +237,21 @@ Complete after Phase 1: 3.1 → 3.2 → 4.1 → 5.2 → 4.2
 ### Phase 3 (Web Interface Development) ✅ **COMPLETED**
 Complete after Phase 2: 6.1 → 6.2 → 6.3
 
-### Phase 4 (Enhanced Interface & Utilities)
-Complete after Phase 3: 5.3 → 7.1 → 7.2
+### Phase 4 (MCP & Agent Foundation) **[NEW - HIGH PRIORITY]**
+Complete after Phase 3: 11.1 → 11.2 → 11.3 → 11.4
 
-### Phase 5 (Quality & Polish)  
-Complete after Phase 4: 8.1 → 8.2 → 8.3 → 9.1 → 9.2 → 10.1 → 10.2
+### Phase 5 (Enhanced Interface & Utilities)
+Complete after Phase 4: 5.3 → 7.1 → 7.2
+
+### Phase 6 (Quality & Polish)  
+Complete after Phase 5: 8.1 → 8.2 → 8.3 → 9.1 → 9.2 → 10.1 → 10.2
 
 **Key Changes:**
 - ✅ **Phase 1 & 2 Complete**: CLI functionality with AI integration fully working
 - ✅ **Phase 3 Complete**: Full web interface and RESTful API implementation
-- **Next focus**: Enhanced interface utilities and comprehensive testing
-- **Progressive enhancement**: Built comprehensive web UI on solid CLI foundation
+- 🚀 **Phase 4 New**: MCP tools refactoring and LangGraph agent framework (HIGH PRIORITY)
+- **Next focus**: AI agent capabilities with MCP-based retrieval orchestration
+- **Progressive enhancement**: Building intelligent agent layer on solid foundation
 
 
 ## Notes
