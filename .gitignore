@@ -43,6 +43,7 @@ MANIFEST
 .venv
 env/
 venv/
+venv_*/
 ENV/
 env.bak/
 venv.bak/
@@ -89,3 +90,15 @@ temp/
 tomorrow.md
 notes/
 *.local.md
+
+# LangGraph Studio
+.langgraph_api/
+langgraph_studio_*.py
+
+# Debug and development screenshots
+*.png
+*.jpg
+*.jpeg
+*.gif
+error_*.png
+screenshot_*.png
