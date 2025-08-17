@@ -17,7 +17,18 @@ Info Agent provides a command-line interface for storing, searching, and managin
    pip install -r requirements.txt
    ```
 
-2. **Initialize database (optional - happens automatically):**
+2. **Configure environment variables:**
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env with your API keys:
+   # - OPENAI_API_KEY: Required for AI processing
+   # - LANGCHAIN_API_KEY: Optional, for LangSmith tracing
+   # - LANGCHAIN_PROJECT: Project name in LangSmith
+   ```
+
+3. **Initialize database (optional - happens automatically):**
    ```bash
    # Manual database initialization
    python -m info_agent.core
