@@ -132,24 +132,34 @@ class MemoryAgent:
     def _agent_reasoning(self, state: AgentState) -> Dict[str, Any]:
         """Enhanced reasoning step that handles various operation types"""
         
-        # Extract user query from state or messages
-        user_query = state.get("user_query")
-        if not user_query and state.get("messages"):
-            # Extract from the first human message if user_query is not provided
-            for msg in state["messages"]:
-                if hasattr(msg, 'content') and msg.content:
-                    user_query = msg.content
+        # Extract the latest user query from messages
+        latest_user_query = None
+        if state.get("messages"):
+            # Find the most recent human message
+            for msg in reversed(state["messages"]):
+                if isinstance(msg, HumanMessage) and hasattr(msg, 'content') and msg.content:
+                    latest_user_query = msg.content
                     break
         
-        if not user_query:
-            user_query = "Show me my recent memories"  # Default fallback
+        # Check if this is a new query (different from stored user_query)
+        stored_user_query = state.get("user_query")
+        is_new_query = (latest_user_query != stored_user_query) if stored_user_query else True
+        
+        user_query = latest_user_query or stored_user_query or "Show me my recent memories"
             
         iteration = state.get("iteration_count", 0)
-        search_results = state.get("search_results", {})
         
-        # Determine operation type if not set
+        # Clear search results if this is a new query
+        if is_new_query:
+            search_results = {}
+            iteration = 0
+            logger.info(f"🔄 New user query detected: '{user_query}' - clearing previous search results")
+        else:
+            search_results = state.get("search_results", {})
+        
+        # Determine operation type if not set or if this is a new query
         operation_type = state.get("operation_type")
-        if not operation_type:
+        if not operation_type or is_new_query:
             operation_type = self._detect_operation_type(user_query)
         
         # Create context-aware reasoning prompt
@@ -199,7 +209,8 @@ class MemoryAgent:
             "messages": state["messages"] + [response],
             "user_query": user_query,
             "operation_type": operation_type,
-            "iteration_count": iteration + 1
+            "iteration_count": iteration + 1,
+            "search_results": search_results  # Ensure search_results are properly carried forward/reset
         }
     
     @trace_agent_operation("execute_tools", {"component": "memory_agent", "step": "tool_execution"})
@@ -303,24 +314,22 @@ class MemoryAgent:
         iteration_count = state["iteration_count"]
         
         if not search_results:
-            final_response = "I wasn't able to find information to help with your request. Please try rephrasing your query."
+            final_response = "I couldn't find any related memories."
         else:
             # Let LLM format the response based on all accumulated results
             format_prompt = f"""
             User asked: "{user_query}"
-            Operation type: {operation_type}
-            Processing iterations: {iteration_count}
             
-            All search results gathered: {json.dumps(search_results, indent=2)}
+            Search results: {json.dumps(search_results, indent=2)}
             
-            Please provide a helpful, conversational response based on these search results.
+            Provide a direct, concise response based on these search results.
             
             Guidelines:
-            - If memories were found, summarize the key information clearly
-            - If no memories were found, suggest alternative search terms or approaches
-            - If multiple tools were used, synthesize information from all sources
-            - Keep it concise but informative
-            - Be conversational and helpful
+            - Answer the question directly without preambles like "根据您的问题" or "从记忆中"
+            - Start immediately with the relevant information
+            - Be conversational but concise
+            - If multiple memories found, list the most relevant ones
+            - If no memories found, simply say "I couldn't find any related memories"
             """
             
             messages = [HumanMessage(content=format_prompt)]
