@@ -189,25 +189,25 @@ This document breaks down the M0 prototype development into concrete, independen
 
 ## 11. MCP & Agent Foundation **[NEW - HIGH PRIORITY]**
 
-### 11.1 MCP Tools Refactoring
-- [ ] 11.1.1 Install MCP dependencies (mcp, langgraph, langchain-core)
-- [ ] 11.1.2 Create MCP server structure and configuration
-- [ ] 11.1.3 Refactor existing search functions into MCP tools:
-  - [ ] 11.1.3a Convert database structured query to MCP tool
-  - [ ] 11.1.3b Convert vector semantic search to MCP tool  
-  - [ ] 11.1.3c Create hybrid orchestrator MCP tool for RRF ranking
-- [ ] 11.1.4 Add MCP tool metadata and schemas for type safety
-- [ ] 11.1.5 Create MCP client wrapper for tool invocation
-- [ ] 11.1.6 Test MCP tools independently (unit tests)
+### 11.1 Direct Tool Integration (Simplified from MCP)
+- [x] 11.1.1 Install LangGraph and LangChain dependencies
+- [x] 11.1.2 Create direct LangChain tools wrapping existing repository layer
+- [x] 11.1.3 Implement core memory tools:
+  - [x] 11.1.3a Structured database search tool
+  - [x] 11.1.3b Semantic vector search tool  
+  - [x] 11.1.3c Hybrid AI-enhanced search tool
+  - [x] 11.1.3d Memory retrieval and statistics tools
+- [x] 11.1.4 Add comprehensive tool schemas and documentation
+- [x] 11.1.5 Test direct tools independently (working)
 
 ### 11.2 LangGraph Agent Framework
-- [ ] 11.2.1 Design basic workflow graph for query processing
-- [ ] 11.2.2 Implement query classification node (schedule/document/general)
-- [ ] 11.2.3 Create source routing node (which MCP tools to use)
-- [ ] 11.2.4 Build parallel retrieval execution node
-- [ ] 11.2.5 Add result synthesis and response formatting node
-- [ ] 11.2.6 Create simple state management for workflow context
-- [ ] 11.2.7 Test basic LangGraph workflow with MCP integration
+- [x] 11.2.1 Design basic workflow graph for query processing
+- [x] 11.2.2 Implement query classification node (method selection)
+- [x] 11.2.3 Create LLM reasoning node with tool binding
+- [x] 11.2.4 Build tool execution node with error handling
+- [x] 11.2.5 Add result synthesis and response formatting node
+- [x] 11.2.6 Create typed state management for workflow context
+- [x] 11.2.7 Test basic LangGraph framework structure (ready for OpenAI)
 
 ### 11.3 Enhanced Ranking & Evaluation
 - [ ] 11.3.1 Implement Reciprocal Rank Fusion (RRF) for multi-source results

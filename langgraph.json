@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "agent": "./info_agent/agents/memory_agent.py:app"
+  },
+  "env": ".env"
+}

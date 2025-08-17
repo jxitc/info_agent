@@ -32,3 +32,13 @@ flask-cors>=4.0.0
 # Logging and Utilities
 python-dotenv>=1.0.0
 rich>=13.0.0  # For better CLI output formatting
+
+# MCP and Agent Framework Dependencies
+# Note: MCP is still in development, will implement MCP-compatible interfaces
+langgraph>=0.2.0  # LangChain Graph-based workflow orchestration
+langchain-core>=0.3.0  # Core LangChain components
+langchain>=0.3.0  # Full LangChain for agent development
+langchain-openai>=0.2.0  # OpenAI integration for LangChain
+
+# Observability and Monitoring
+langsmith>=0.1.0  # LangSmith tracing and monitoring
