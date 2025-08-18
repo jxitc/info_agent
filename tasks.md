@@ -226,6 +226,16 @@ This document breaks down the M0 prototype development into concrete, independen
 - [ ] 11.4.6 Integrate KG into triple retrieval system (SQL + Vector + Graph)
 - [ ] 11.4.7 Test multi-hop relationship queries and entity disambiguation
 
+### 11.5 Memory Agent Architecture Improvements (Based on TODOs/FIXMEs)
+- [ ] 11.5.1 **LangSmith Integration**: Document LangSmith annotation parameters and improve explicit logging vs decorators
+- [ ] 11.5.2 **New Query Detection**: Research and implement LLM-based new query detection instead of hardcoded logic
+- [ ] 11.5.3 **Tool Call Mechanism**: Document and improve tool binding and LLM tool call decision process
+- [ ] 11.5.4 **State Management**: Remove search-tool coupling and make state management more generic for future tools
+- [ ] 11.5.5 **Response Architecture**: Evaluate consolidating format_response into agent_reasoning node
+- [ ] 11.5.6 **Default Behavior**: Replace default "Show me my recent memories" with proper greeting/help system
+- [ ] 11.5.7 **Factory Functions**: Document and improve create_memory_agent and process_query usage patterns
+- [ ] 11.5.8 **AgentState Schema**: Make appropriate fields optional using NotRequired for better Studio UX
+
 ## Dependencies & Ordering
 
 ### Phase 1 (Foundation) ✅ **COMPLETED**

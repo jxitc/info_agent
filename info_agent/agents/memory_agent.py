@@ -273,7 +273,7 @@ class MemoryAgent:
                 logger.error(error_msg)
         
         # Merge new results with existing results
-        merged_results = {**current_results, **new_results}
+        merged_results = {**current_results, **new_results} 
         
         return {
             "messages": state["messages"] + tool_messages,
