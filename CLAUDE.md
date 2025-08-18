@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Update documentation promptly
 - When updating CLI commands, always update @docs/cli_usage.md documentation to reflect the changes
 - Use venv when test python script in this code base, e.g. `source venv/bin/activate && python some_code.py`
+- NEVER auto git commit and push, always ask for human approval
 
 ## Project Overview
 
@@ -28,4 +29,3 @@ Since this appears to be an early-stage project without established build tools,
 - Version management preserves memory history during updates
 - Security and privacy features planned for M2 and later milestones
 - AI Processing is mandatory, do not fallback to non-AI solution for any reason failed to start OpenAI client
-
