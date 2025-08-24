@@ -615,8 +615,7 @@ class MemoryService:
         try:
             # Process query with AI to extract search criteria (required)
             search_analysis = self.processor.process_search_query(query)
-            enhanced_query = search_analysis.get('enhanced_query', query)
-            self.logger.info(f"Enhanced search query: '{enhanced_query}'")
+            self.logger.info(f"Processing search query: '{query}'")
             self.logger.debug(f"Search intent: {search_analysis.get('search_intent', 'Unknown')}")
             
             # Log detailed search analysis results
@@ -628,8 +627,8 @@ class MemoryService:
             self.logger.debug(f"Field filters: {field_filters}")
             self.logger.debug(f"Full search analysis: {json.dumps(search_analysis, indent=2, default=str)}")
             
-            # Use enhanced query for hybrid search
-            results = self.repository.hybrid_search(enhanced_query, limit=limit)
+            # Use original query for hybrid search (not enhanced query)
+            results = self.repository.hybrid_search(query, limit=limit)
             
             # Apply additional filtering based on extracted criteria
             self.logger.debug(f"Applying filters to {len(results)} search results")

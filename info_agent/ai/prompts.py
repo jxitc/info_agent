@@ -98,13 +98,12 @@ Guidelines:
 
 # Search query analysis prompt template
 SEARCH_ANALYSIS_TEMPLATE = PromptTemplate(
-    template="""Analyze this search query and extract structured search criteria.
+    template="""Analyze this search query and extract structured search criteria for filtering search results.
 
 Search Query: "{query}"
 
 Return a JSON object with the following structure:
 {{
-    "enhanced_query": "optimized search terms for semantic search",
     "field_filters": {{"field_name": "value"}},
     "categories": ["category1", "category2"],
     "people": ["person1", "person2"],
@@ -115,10 +114,10 @@ Return a JSON object with the following structure:
 }}
 
 Guidelines:
-- enhanced_query should be keywords optimized for vector search
 - field_filters should map to common dynamic field names (category, people, places, etc.)
-- Extract any mentioned people, places, categories
-- Identify time/date references
+- Extract any mentioned people, places, categories from the query
+- Identify time/date references if mentioned
+- Focus on extracting filter criteria, not rewriting the search query
 - Keep response concise and structured""",
     required_vars=["query"]
 )
