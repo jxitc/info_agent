@@ -258,6 +258,17 @@ curl -X POST http://localhost:5000/api/memories \
 curl "http://localhost:5000/api/search?q=project%20deadline"
 ```
 
+#### Langgraph Studio 
+
+```
+$ source venv_studio/bin/activate      
+$ langgraph dev --no-browser --port 8123
+
+Then open studio UI:
+
+https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8123
+```
+
 ## 🛠️ Development
 
 ### Testing
