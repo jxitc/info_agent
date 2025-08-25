@@ -433,7 +433,7 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
             # vector_results are already MemorySearchResult objects from the vector store
             search_results = vector_results
             
-            self.logger.debug(f"Semantic search '{query}' returned {len(search_results)} results")
+            self.logger.info(f"Semantic search '{query}' returned {len(search_results)} results")
             return search_results
             
         except Exception as e:
