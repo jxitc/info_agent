@@ -12,6 +12,8 @@ class InfoAgent {
         this.searchQuery = '';
         this.isLoading = false;
         this.searchStats = null; // Store search filtering statistics
+        this.chatHistory = []; // Store chat messages
+        this.ragResults = []; // Store RAG search results for chat context
         
         this.init();
     }
@@ -180,6 +182,9 @@ class InfoAgent {
             case 'add':
                 this.renderAddMemoryView();
                 break;
+            case 'chat':
+                this.renderChatView();
+                break;
             case 'status':
                 this.renderStatusView();
                 break;
@@ -220,6 +225,251 @@ class InfoAgent {
         this.setupEventListeners(); // Re-setup event listeners for new elements
     }
     
+    /**
+     * Render chat view with split layout
+     */
+    renderChatView() {
+        const content = `
+            <div class="chat-container">
+                <div class="chat-layout">
+                    <!-- Left side: ChatGPT-style chat interface -->
+                    <div class="chat-panel">
+                        <div class="chat-header">
+                            <h2>💬 Chat with Info Agent</h2>
+                            <div class="chat-status">
+                                <span class="status-indicator online"></span>
+                                Memory Agent Ready
+                            </div>
+                        </div>
+                        
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="message ai-message">
+                                <div class="message-avatar">🤖</div>
+                                <div class="message-content">
+                                    <div class="message-text">Hi there! I'm your personal memory agent. I can help you search through your memories, find relevant information, and answer questions about what you've stored. What would you like to know?</div>
+                                    <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-container">
+                            <div class="chat-input-wrapper">
+                                <textarea 
+                                    id="chat-input" 
+                                    class="chat-input" 
+                                    placeholder="Ask about your memories... (Press Enter to send)"
+                                    rows="1"
+                                ></textarea>
+                                <button id="chat-send-button" class="chat-send-button" type="button">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right side: RAG search results panel -->
+                    <div class="rag-panel">
+                        <div class="rag-header">
+                            <h3>📚 Relevant Memories</h3>
+                            <div class="rag-info">
+                                <span id="rag-count">4 memories found</span>
+                            </div>
+                        </div>
+                        
+                        <div class="rag-results" id="rag-results">
+                            <!-- Dummy RAG results for testing -->
+                            <div class="rag-memory">
+                                <div class="rag-memory-header">
+                                    <span class="rag-memory-id">#42</span>
+                                    <span class="rag-memory-score">Score: 0.85</span>
+                                </div>
+                                <h4 class="rag-memory-title">Meeting with Sarah about project timeline</h4>
+                                <p class="rag-memory-snippet">Discussed project milestones and deadline for next Tuesday. Need to follow up on budget allocation...</p>
+                                <div class="rag-memory-meta">
+                                    <span class="rag-memory-date">📅 2024-08-20</span>
+                                    <span class="rag-memory-category">work</span>
+                                </div>
+                            </div>
+                            
+                            <div class="rag-memory">
+                                <div class="rag-memory-header">
+                                    <span class="rag-memory-id">#38</span>
+                                    <span class="rag-memory-score">Score: 0.72</span>
+                                </div>
+                                <h4 class="rag-memory-title">Project budget planning notes</h4>
+                                <p class="rag-memory-snippet">Initial budget estimates for Q4. Need to allocate resources for development team and infrastructure...</p>
+                                <div class="rag-memory-meta">
+                                    <span class="rag-memory-date">📅 2024-08-18</span>
+                                    <span class="rag-memory-category">finance</span>
+                                </div>
+                            </div>
+                            
+                            <div class="rag-memory">
+                                <div class="rag-memory-header">
+                                    <span class="rag-memory-id">#35</span>
+                                    <span class="rag-memory-score">Score: 0.68</span>
+                                </div>
+                                <h4 class="rag-memory-title">Team standup - development progress</h4>
+                                <p class="rag-memory-snippet">Progress update on API development. Sarah mentioned potential timeline adjustments...</p>
+                                <div class="rag-memory-meta">
+                                    <span class="rag-memory-date">📅 2024-08-15</span>
+                                    <span class="rag-memory-category">meetings</span>
+                                </div>
+                            </div>
+                            
+                            <div class="rag-memory">
+                                <div class="rag-memory-header">
+                                    <span class="rag-memory-id">#31</span>
+                                    <span class="rag-memory-score">Score: 0.45</span>
+                                </div>
+                                <h4 class="rag-memory-title">Weekly project status report</h4>
+                                <p class="rag-memory-snippet">Overall project health is good. Some delays in testing phase but timeline still achievable...</p>
+                                <div class="rag-memory-meta">
+                                    <span class="rag-memory-date">📅 2024-08-12</span>
+                                    <span class="rag-memory-category">reports</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('main-content').innerHTML = content;
+        this.setupChatEventListeners();
+    }
+    
+    /**
+     * Setup event listeners for chat interface
+     */
+    setupChatEventListeners() {
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('chat-send-button');
+        
+        if (chatInput) {
+            // Auto-resize textarea
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+            });
+            
+            // Send on Enter (but Shift+Enter for new line)
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendChatMessage();
+                }
+            });
+        }
+        
+        if (sendButton) {
+            sendButton.addEventListener('click', () => {
+                this.sendChatMessage();
+            });
+        }
+    }
+    
+    /**
+     * Send chat message (placeholder implementation)
+     */
+    async sendChatMessage() {
+        const chatInput = document.getElementById('chat-input');
+        const message = chatInput.value.trim();
+        
+        if (!message) return;
+        
+        // Add user message to chat
+        this.addChatMessage(message, 'user');
+        
+        // Clear input
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        
+        // Show typing indicator
+        this.showTypingIndicator();
+        
+        // TODO: Connect to actual memory agent
+        // For now, simulate AI response
+        setTimeout(() => {
+            this.hideTypingIndicator();
+            this.addChatMessage("I received your message: \"" + message + "\". This is a placeholder response. The memory agent integration is coming soon!", 'ai');
+            
+            // TODO: Update RAG results based on the query
+            this.updateRagResults(message);
+        }, 1500);
+    }
+    
+    /**
+     * Add message to chat (placeholder implementation)
+     */
+    addChatMessage(message, sender) {
+        const messagesContainer = document.getElementById('chat-messages');
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${sender}-message`;
+        
+        const avatar = sender === 'user' ? '👤' : '🤖';
+        const time = new Date().toLocaleTimeString();
+        
+        messageElement.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-content">
+                <div class="message-text">${this.escapeHtml(message)}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    /**
+     * Show typing indicator
+     */
+    showTypingIndicator() {
+        const messagesContainer = document.getElementById('chat-messages');
+        const typingElement = document.createElement('div');
+        typingElement.className = 'message ai-message typing-indicator';
+        typingElement.id = 'typing-indicator';
+        
+        typingElement.innerHTML = `
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <div class="message-text">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(typingElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    /**
+     * Hide typing indicator
+     */
+    hideTypingIndicator() {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+    }
+    
+    /**
+     * Update RAG results (placeholder implementation)
+     */
+    updateRagResults(query) {
+        const ragCount = document.getElementById('rag-count');
+        if (ragCount) {
+            ragCount.textContent = `3 memories found for "${query}"`;
+        }
+    }
+
     /**
      * Render add memory view
      */
