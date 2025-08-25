@@ -129,10 +129,6 @@ class InfoAgent {
                         e.preventDefault();
                         this.navigateTo('add');
                         break;
-                    case 'f':
-                        e.preventDefault();
-                        this.navigateTo('search');
-                        break;
                 }
             }
         });
@@ -183,9 +179,6 @@ class InfoAgent {
                 break;
             case 'add':
                 this.renderAddMemoryView();
-                break;
-            case 'search':
-                this.renderSearchView();
                 break;
             case 'status':
                 this.renderStatusView();
@@ -273,19 +266,6 @@ class InfoAgent {
         this.setupEventListeners();
     }
     
-    /**
-     * Render search view (same as memories but with search focus)
-     */
-    renderSearchView() {
-        this.renderMemoriesView();
-        // Auto-focus search input
-        setTimeout(() => {
-            const searchInput = document.getElementById('search-input');
-            if (searchInput) {
-                searchInput.focus();
-            }
-        }, 100);
-    }
     
     /**
      * Render system status view
