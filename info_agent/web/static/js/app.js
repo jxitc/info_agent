@@ -142,6 +142,9 @@ class InfoAgent {
     async loadInitialData() {
         await this.loadMemories();
         this.updateUI();
+        
+        // Clear RAG panel on startup
+        this.clearRagPanelOnStartup();
     }
     
     /**
@@ -184,6 +187,8 @@ class InfoAgent {
                 break;
             case 'chat':
                 this.renderChatView();
+                // Clear RAG panel when first entering chat view
+                setTimeout(() => this.clearRagPanelOnStartup(), 100);
                 break;
             case 'status':
                 this.renderStatusView();
@@ -274,63 +279,12 @@ class InfoAgent {
                         <div class="rag-header">
                             <h3>📚 Relevant Memories</h3>
                             <div class="rag-info">
-                                <span id="rag-count">4 memories found</span>
+                                <span id="rag-count">Welcome</span>
                             </div>
                         </div>
                         
                         <div class="rag-results" id="rag-results">
-                            <!-- Dummy RAG results for testing -->
-                            <div class="rag-memory">
-                                <div class="rag-memory-header">
-                                    <span class="rag-memory-id">#42</span>
-                                    <span class="rag-memory-score">Score: 0.85</span>
-                                </div>
-                                <h4 class="rag-memory-title">Meeting with Sarah about project timeline</h4>
-                                <p class="rag-memory-snippet">Discussed project milestones and deadline for next Tuesday. Need to follow up on budget allocation...</p>
-                                <div class="rag-memory-meta">
-                                    <span class="rag-memory-date">📅 2024-08-20</span>
-                                    <span class="rag-memory-category">work</span>
-                                </div>
-                            </div>
-                            
-                            <div class="rag-memory">
-                                <div class="rag-memory-header">
-                                    <span class="rag-memory-id">#38</span>
-                                    <span class="rag-memory-score">Score: 0.72</span>
-                                </div>
-                                <h4 class="rag-memory-title">Project budget planning notes</h4>
-                                <p class="rag-memory-snippet">Initial budget estimates for Q4. Need to allocate resources for development team and infrastructure...</p>
-                                <div class="rag-memory-meta">
-                                    <span class="rag-memory-date">📅 2024-08-18</span>
-                                    <span class="rag-memory-category">finance</span>
-                                </div>
-                            </div>
-                            
-                            <div class="rag-memory">
-                                <div class="rag-memory-header">
-                                    <span class="rag-memory-id">#35</span>
-                                    <span class="rag-memory-score">Score: 0.68</span>
-                                </div>
-                                <h4 class="rag-memory-title">Team standup - development progress</h4>
-                                <p class="rag-memory-snippet">Progress update on API development. Sarah mentioned potential timeline adjustments...</p>
-                                <div class="rag-memory-meta">
-                                    <span class="rag-memory-date">📅 2024-08-15</span>
-                                    <span class="rag-memory-category">meetings</span>
-                                </div>
-                            </div>
-                            
-                            <div class="rag-memory">
-                                <div class="rag-memory-header">
-                                    <span class="rag-memory-id">#31</span>
-                                    <span class="rag-memory-score">Score: 0.45</span>
-                                </div>
-                                <h4 class="rag-memory-title">Weekly project status report</h4>
-                                <p class="rag-memory-snippet">Overall project health is good. Some delays in testing phase but timeline still achievable...</p>
-                                <div class="rag-memory-meta">
-                                    <span class="rag-memory-date">📅 2024-08-12</span>
-                                    <span class="rag-memory-category">reports</span>
-                                </div>
-                            </div>
+                            <!-- RAG results will be dynamically populated by JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -372,7 +326,7 @@ class InfoAgent {
     }
     
     /**
-     * Send chat message (placeholder implementation)
+     * Send chat message to memory agent
      */
     async sendChatMessage() {
         const chatInput = document.getElementById('chat-input');
@@ -383,22 +337,61 @@ class InfoAgent {
         // Add user message to chat
         this.addChatMessage(message, 'user');
         
-        // Clear input
+        // Clear input and reset height
         chatInput.value = '';
         chatInput.style.height = 'auto';
+        
+        // Clear RAG results from previous query
+        this.clearRagResults();
         
         // Show typing indicator
         this.showTypingIndicator();
         
-        // TODO: Connect to actual memory agent
-        // For now, simulate AI response
-        setTimeout(() => {
-            this.hideTypingIndicator();
-            this.addChatMessage("I received your message: \"" + message + "\". This is a placeholder response. The memory agent integration is coming soon!", 'ai');
+        try {
+            // Call the memory agent API
+            const response = await fetch(`${this.apiBaseUrl}/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    context: {} // TODO: Add conversation context in future
+                })
+            });
             
-            // TODO: Update RAG results based on the query
-            this.updateRagResults(message);
-        }, 1500);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Hide typing indicator
+                this.hideTypingIndicator();
+                
+                // Add AI response to chat
+                this.addChatMessage(data.data.response, 'ai');
+                
+                // Update RAG results panel with real search results
+                this.updateRagResults(data.data.rag_results, data.data.metadata);
+                
+                console.log('Chat response received:', {
+                    iterations: data.data.metadata.iterations,
+                    operation_type: data.data.metadata.operation_type,
+                    total_results: data.data.metadata.total_results
+                });
+                
+            } else {
+                // Handle API error
+                this.hideTypingIndicator();
+                const errorMsg = data.error?.message || 'Failed to process your message';
+                this.addChatMessage(`Sorry, I encountered an error: ${errorMsg}`, 'ai');
+                console.error('Chat API error:', data.error);
+            }
+            
+        } catch (error) {
+            // Handle network/parsing errors
+            this.hideTypingIndicator();
+            this.addChatMessage('Sorry, I\'m having trouble connecting to the memory agent. Please try again.', 'ai');
+            console.error('Chat request failed:', error);
+        }
     }
     
     /**
@@ -461,13 +454,111 @@ class InfoAgent {
     }
     
     /**
-     * Update RAG results (placeholder implementation)
+     * Clear RAG panel on startup with welcome message
      */
-    updateRagResults(query) {
+    clearRagPanelOnStartup() {
         const ragCount = document.getElementById('rag-count');
+        const ragResultsContainer = document.getElementById('rag-results');
+        
         if (ragCount) {
-            ragCount.textContent = `3 memories found for "${query}"`;
+            ragCount.textContent = 'Start chatting to see relevant memories';
         }
+        
+        if (ragResultsContainer) {
+            ragResultsContainer.innerHTML = `
+                <div class="rag-welcome">
+                    <div class="rag-welcome-icon">💬</div>
+                    <h4>Welcome to Info Agent</h4>
+                    <p>Start a conversation to see relevant memories appear here as the agent searches through your personal knowledge base.</p>
+                    <div class="rag-features">
+                        <div class="feature-item">🔍 Smart search results</div>
+                        <div class="feature-item">📊 Relevance scoring</div>
+                        <div class="feature-item">🧠 AI-powered matching</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Clear RAG results panel during search
+     */
+    clearRagResults() {
+        const ragCount = document.getElementById('rag-count');
+        const ragResultsContainer = document.getElementById('rag-results');
+        
+        if (ragCount) {
+            ragCount.textContent = 'Searching memories...';
+        }
+        
+        if (ragResultsContainer) {
+            ragResultsContainer.innerHTML = `
+                <div class="rag-loading">
+                    <div class="spinner"></div>
+                    <p>Searching through your memories...</p>
+                </div>
+            `;
+        }
+    }
+    
+    /**
+     * Update RAG results with real agent search results
+     */
+    updateRagResults(ragResults, metadata) {
+        const ragCount = document.getElementById('rag-count');
+        const ragResultsContainer = document.getElementById('rag-results');
+        
+        if (ragCount) {
+            const count = ragResults?.length || 0;
+            const query = metadata?.query || '';
+            ragCount.textContent = `${count} ${count === 1 ? 'memory' : 'memories'} found${query ? ` for "${query}"` : ''}`;
+        }
+        
+        if (ragResultsContainer) {
+            if (!ragResults || ragResults.length === 0) {
+                ragResultsContainer.innerHTML = `
+                    <div class="rag-empty">
+                        <p>No relevant memories found for this query.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Render real RAG results
+            const resultsHtml = ragResults.map(result => this.renderRagMemory(result)).join('');
+            ragResultsContainer.innerHTML = resultsHtml;
+        }
+    }
+    
+    /**
+     * Render individual RAG memory result
+     */
+    renderRagMemory(result) {
+        const score = result.relevance_score || 0;
+        const scoreText = score.toFixed(2);
+        const scoreClass = score >= 0.8 ? 'high' : score >= 0.5 ? 'medium' : 'low';
+        
+        const date = result.metadata?.date ? 
+            new Date(result.metadata.date).toLocaleDateString() : '';
+        const category = result.metadata?.category || '';
+        const wordCount = result.metadata?.word_count || '';
+        
+        return `
+            <div class="rag-memory" data-memory-id="${result.memory_id}">
+                <div class="rag-memory-header">
+                    <span class="rag-memory-id">#${result.memory_id}</span>
+                    <span class="rag-memory-score score-${scoreClass}">Score: ${scoreText}</span>
+                </div>
+                <h4 class="rag-memory-title">${this.escapeHtml(result.title)}</h4>
+                <p class="rag-memory-snippet">${this.escapeHtml(result.snippet)}</p>
+                <div class="rag-memory-meta">
+                    ${date ? `<span class="rag-memory-date">📅 ${date}</span>` : ''}
+                    ${category ? `<span class="rag-memory-category">${this.escapeHtml(category)}</span>` : ''}
+                    ${wordCount ? `<span class="rag-memory-words">${wordCount} words</span>` : ''}
+                    <span class="rag-memory-source">📊 ${result.source}</span>
+                </div>
+            </div>
+        `;
     }
 
     /**

@@ -146,6 +146,7 @@ def register_blueprints(app):
     from info_agent.api.routes.memories import memories_bp
     from info_agent.api.routes.search import search_bp  
     from info_agent.api.routes.system import system_bp
+    from info_agent.api.routes.chat import chat_bp
     
     # API version prefix
     api_prefix = '/api/v1'
@@ -154,6 +155,7 @@ def register_blueprints(app):
     app.register_blueprint(memories_bp, url_prefix=api_prefix)
     app.register_blueprint(search_bp, url_prefix=api_prefix)
     app.register_blueprint(system_bp, url_prefix=api_prefix)
+    app.register_blueprint(chat_bp, url_prefix=api_prefix)
 
 
 if __name__ == '__main__':
