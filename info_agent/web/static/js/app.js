@@ -11,6 +11,7 @@ class InfoAgent {
         this.memories = [];
         this.searchQuery = '';
         this.isLoading = false;
+        this.searchStats = null; // Store search filtering statistics
         
         this.init();
     }
@@ -63,16 +64,23 @@ class InfoAgent {
         
         // Search functionality
         const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.handleSearch(e.target.value);
-            });
-            
+            // Search when Enter is pressed
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     this.performSearch(e.target.value);
                 }
+            });
+        }
+        
+        if (searchButton) {
+            // Search when button is clicked
+            searchButton.addEventListener('click', () => {
+                const query = searchInput ? searchInput.value : '';
+                this.performSearch(query);
             });
         }
         
@@ -200,12 +208,14 @@ class InfoAgent {
                     type="text" 
                     id="search-input" 
                     class="search-bar" 
-                    placeholder="Search for memory..."
+                    placeholder="Search for memory... (Press Enter or click search)"
                     value="${this.searchQuery}"
                 >
-                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
+                <button id="search-button" class="search-button" type="button" title="Search">
+                    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </button>
             </div>
             
             <div id="memories-container">
@@ -347,7 +357,47 @@ class InfoAgent {
         }
         
         const memoriesHtml = this.memories.map(memory => this.renderMemoryCard(memory)).join('');
-        return `<div class="memory-grid">${memoriesHtml}</div>`;
+        const searchInfoHtml = this.renderSearchInfo();
+        
+        return `
+            ${searchInfoHtml}
+            <div class="memory-grid">${memoriesHtml}</div>
+        `;
+    }
+    
+    /**
+     * Render search info message
+     */
+    renderSearchInfo() {
+        if (!this.searchStats) {
+            return ''; // No search performed, don't show anything
+        }
+        
+        const { totalResults, filteredResults, query } = this.searchStats;
+        
+        if (totalResults === filteredResults) {
+            // No filtering occurred
+            return `
+                <div class="search-info">
+                    <svg class="search-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Found <strong>${filteredResults}</strong> ${filteredResults === 1 ? 'result' : 'results'} for "<em>${this.escapeHtml(query)}</em>"
+                </div>
+            `;
+        } else {
+            // Filtering occurred
+            const filtered = totalResults - filteredResults;
+            return `
+                <div class="search-info">
+                    <svg class="search-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Found <strong>${filteredResults}</strong> relevant ${filteredResults === 1 ? 'result' : 'results'} for "<em>${this.escapeHtml(query)}</em>"
+                    <span class="filter-info">— filtered out ${filtered} ${filtered === 1 ? 'result' : 'results'} with relevance &lt; 0.3</span>
+                </div>
+            `;
+        }
     }
     
     /**
@@ -447,6 +497,7 @@ class InfoAgent {
      */
     async loadMemories(limit = 20) {
         this.isLoading = true;
+        this.searchStats = null; // Clear search stats when loading all memories
         this.updateUI();
         
         try {
@@ -485,15 +536,30 @@ class InfoAgent {
             const data = await response.json();
             
             if (data.success) {
-                // Convert search results to memory format
-                this.memories = data.data.results.map(result => ({
+                // Filter results by relevance score > 0.3, then convert to memory format
+                const filteredResults = data.data.results.filter(result => {
+                    const hasScore = result.relevance_score !== null && result.relevance_score !== undefined;
+                    return hasScore && result.relevance_score > 0.3;
+                });
+                
+                // Store search statistics for UI display
+                this.searchStats = {
+                    totalResults: data.data.results.length,
+                    filteredResults: filteredResults.length,
+                    query: query
+                };
+                
+                this.memories = filteredResults.map(result => ({
                     id: result.memory_id,
                     title: result.title,
                     content: result.snippet,
                     created_at: new Date().toISOString(), // Placeholder
                     word_count: result.snippet.split(' ').length,
-                    dynamic_fields: {}
+                    dynamic_fields: {},
+                    relevance_score: result.relevance_score // Keep relevance score for debugging
                 }));
+                
+                console.log(`Search for "${query}": ${data.data.results.length} total, ${filteredResults.length} relevant (score > 0.3)`);
             } else {
                 throw new Error(data.error?.message || 'Search failed');
             }
@@ -576,15 +642,7 @@ class InfoAgent {
      * Event Handlers
      */
     
-    handleSearch(query) {
-        // Debounce search
-        clearTimeout(this.searchTimeout);
-        this.searchTimeout = setTimeout(() => {
-            if (query.trim() !== this.searchQuery) {
-                this.performSearch(query);
-            }
-        }, 300);
-    }
+    // Removed handleSearch method - now only search on Enter key press
     
     performSearch(query) {
         this.searchMemories(query);

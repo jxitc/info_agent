@@ -188,11 +188,13 @@ body {
 .search-container {
     position: relative;
     margin-bottom: 2rem;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .search-bar {
-    width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    flex: 1;
+    padding: 0.75rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     font-size: 1rem;
@@ -206,14 +208,75 @@ body {
     box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
 }
 
-.search-icon {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
+.search-button {
+    padding: 0.75rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    min-width: 44px;
+}
+
+.search-button:hover {
+    background: var(--primary-hover);
+}
+
+.search-button:active {
+    transform: translateY(1px);
+}
+
+.search-button .search-icon {
     width: 20px;
     height: 20px;
+}
+
+.search-icon {
+    color: currentColor;
+    width: 20px;
+    height: 20px;
+}
+
+/* Search Info */
+.search-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.search-info-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.search-info strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.search-info em {
+    color: var(--primary-color);
+    font-style: normal;
+    font-weight: 500;
+}
+
+.filter-info {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
 }
 
 /* Memory Cards */

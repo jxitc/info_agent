@@ -434,6 +434,7 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
             search_results = vector_results
             
             self.logger.info(f"Semantic search '{query}' returned {len(search_results)} results")
+
             return search_results
             
         except Exception as e:
@@ -497,7 +498,16 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
             combined_results.sort(key=lambda x: x.relevance_score, reverse=True)
             combined_results = combined_results[:limit]
             
-            self.logger.debug(f"Hybrid search '{query}' returned {len(combined_results)} results")
+            # Log detailed result information
+            self.logger.info(f"Hybrid search '{query}' returned {len(combined_results)} results")
+            for i, result in enumerate(combined_results[:5]):  # Log first 5 results for debugging
+                self.logger.info(f"  {i+1}. Memory ID: {result.memory.id}, "
+                                f"Source: {result.match_type}, "
+                                f"Score: {result.relevance_score:.3f}, "
+                                f"Title: '{result.memory.title}'")
+            
+            if len(combined_results) > 5:
+                self.logger.debug(f"  ... and {len(combined_results) - 5} more results")
             return combined_results
             
         except Exception as e:
