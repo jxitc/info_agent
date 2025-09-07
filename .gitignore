@@ -102,3 +102,6 @@ langgraph_studio_*.py
 *.gif
 error_*.png
 screenshot_*.png
+
+# referenced other project
+espresso
