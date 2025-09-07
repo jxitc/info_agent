@@ -233,13 +233,13 @@ This document breaks down the M0 prototype development into concrete, independen
 - [x] 11.2.6 Create typed state management for workflow context
 - [x] 11.2.7 Test basic LangGraph framework structure (ready for OpenAI)
 
-### 11.3 Enhanced Ranking & Evaluation
-- [ ] 11.3.1 Implement Reciprocal Rank Fusion (RRF) for multi-source results
-- [ ] 11.3.2 Add adaptive threshold logic based on query characteristics
-- [ ] 11.3.3 Create confidence scoring system for combined results
-- [ ] 11.3.4 Build basic evaluation framework with RAGAS metrics
-- [ ] 11.3.5 Add source diversity scoring and result deduplication
-- [ ] 11.3.6 Create A/B testing framework for different retrieval approaches
+### 11.3 Enhanced Ranking & Fusion ✅ **COMPLETED**
+- [x] 11.3.1 Implement Reciprocal Rank Fusion (RRF) for multi-source results
+- [x] 11.3.2 Add adaptive threshold logic based on query characteristics
+- [x] 11.3.3 Create confidence scoring system for combined results with UI transparency
+- [x] 11.3.4 Add source diversity scoring and result deduplication
+- [x] 11.3.5 Update WebUI search function to use new ranking system
+- [x] 11.3.6 Add comprehensive logging for ranking decisions and user feedback
 
 ### 11.4 Knowledge Graph Foundation (SQLite-based)
 - [ ] 11.4.1 Design SQLite schema extensions for entities and relationships
@@ -250,15 +250,31 @@ This document breaks down the M0 prototype development into concrete, independen
 - [ ] 11.4.6 Integrate KG into triple retrieval system (SQL + Vector + Graph)
 - [ ] 11.4.7 Test multi-hop relationship queries and entity disambiguation
 
-### 11.5 Memory Agent Architecture Improvements (Based on TODOs/FIXMEs)
-- [ ] 11.5.1 **LangSmith Integration**: Document LangSmith annotation parameters and improve explicit logging vs decorators
-- [ ] 11.5.2 **New Query Detection**: Research and implement LLM-based new query detection instead of hardcoded logic
-- [ ] 11.5.3 **Tool Call Mechanism**: Document and improve tool binding and LLM tool call decision process
-- [ ] 11.5.4 **State Management**: Remove search-tool coupling and make state management more generic for future tools
-- [ ] 11.5.5 **Response Architecture**: Evaluate consolidating format_response into agent_reasoning node
-- [ ] 11.5.6 **Default Behavior**: Replace default "Show me my recent memories" with proper greeting/help system
-- [ ] 11.5.7 **Factory Functions**: Document and improve create_memory_agent and process_query usage patterns
-- [ ] 11.5.8 **AgentState Schema**: Make appropriate fields optional using NotRequired for better Studio UX
+### 11.5 Evaluation & Quality Assessment **[FUTURE - WHEN DATASET READY]**
+- [ ] 11.5.1 Build basic evaluation framework with RAGAS metrics
+- [ ] 11.5.2 Create A/B testing framework for different retrieval approaches
+- [ ] 11.5.3 Implement offline evaluation with golden datasets
+- [ ] 11.5.4 Add online evaluation with user feedback loops
+- [ ] 11.5.5 Create evaluation dashboard for monitoring search quality
+- [ ] 11.5.6 Build performance benchmarking suite for ranking algorithms
+
+### 11.6 Query Analysis & Intelligence **[FUTURE ENHANCEMENT]**
+- [ ] 11.6.1 **LLM-based Query Analysis**: Replace hardcoded keyword-based query classification with LLM analysis
+- [ ] 11.6.2 **Multi-lingual Query Support**: Remove English-specific keywords and support international queries  
+- [ ] 11.6.3 **Intent Classification**: Use AI to classify query intent (search, create, update, analytical)
+- [ ] 11.6.4 **Dynamic Threshold Learning**: Learn optimal thresholds from user interaction patterns
+- [ ] 11.6.5 **Query Expansion**: Use LLM to expand queries with synonyms and related concepts
+- [ ] 11.6.6 **Context-Aware Analysis**: Consider user's conversation context for better query understanding
+
+### 11.7 Memory Agent Architecture Improvements (Based on TODOs/FIXMEs)
+- [ ] 11.7.1 **LangSmith Integration**: Document LangSmith annotation parameters and improve explicit logging vs decorators
+- [ ] 11.7.2 **New Query Detection**: Research and implement LLM-based new query detection instead of hardcoded logic
+- [ ] 11.7.3 **Tool Call Mechanism**: Document and improve tool binding and LLM tool call decision process
+- [ ] 11.7.4 **State Management**: Remove search-tool coupling and make state management more generic for future tools
+- [ ] 11.7.5 **Response Architecture**: Evaluate consolidating format_response into agent_reasoning node
+- [ ] 11.7.6 **Default Behavior**: Replace default "Show me my recent memories" with proper greeting/help system
+- [ ] 11.7.7 **Factory Functions**: Document and improve create_memory_agent and process_query usage patterns
+- [ ] 11.7.8 **AgentState Schema**: Make appropriate fields optional using NotRequired for better Studio UX
 
 ## Dependencies & Ordering
 

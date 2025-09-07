@@ -14,6 +14,7 @@ from info_agent.core.models import Memory, MemorySearchResult
 from info_agent.core.database import DatabaseConnection, get_database
 from info_agent.core.migrations import DatabaseInitializer
 from info_agent.core.vector_store import VectorStore, get_vector_store
+from info_agent.core.ranking import get_enhanced_ranker
 from info_agent.ai.processor import MemoryProcessor, ProcessingError
 from info_agent.utils.logging_config import get_logger
 
@@ -443,14 +444,65 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
     
     def hybrid_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
         """
-        Search memories using combined text + semantic search.
+        Search memories using enhanced RRF-based hybrid search with adaptive ranking.
         
         Args:
             query: Search query string
             limit: Maximum number of results
             
         Returns:
-            List of MemorySearchResult objects from combined search
+            List of MemorySearchResult objects from enhanced hybrid search
+        """
+        try:
+            # Get enhanced ranker
+            ranker = get_enhanced_ranker()
+            
+            # Get results from all search methods
+            fts_results = self.search(query, limit=min(limit * 2, 100))  # Get more results for better fusion
+            semantic_results = self.semantic_search(query, limit=min(limit * 2, 100))
+            
+            # Prepare source results for RRF
+            source_results = {
+                'structured': fts_results,
+                'semantic': semantic_results
+            }
+            
+            # Apply enhanced ranking with RRF, adaptive thresholds, and confidence scoring
+            enhanced_results = ranker.rank_search_results(
+                source_results=source_results,
+                query=query,
+                max_results=limit
+            )
+            
+            # Log detailed result information with new ranking data
+            self.logger.info(f"Enhanced hybrid search '{query}' returned {len(enhanced_results)} results")
+            for i, result in enumerate(enhanced_results[:3], 1):  # Log first 3 results
+                explanation = getattr(result, 'ranking_explanation', 'No explanation available')
+                self.logger.info(f"  {i}. Memory {result.memory.id}: {result.match_type}, "
+                               f"Score: {result.relevance_score:.3f}")
+                self.logger.info(f"     → {explanation}")
+            
+            if len(enhanced_results) > 3:
+                self.logger.debug(f"  ... and {len(enhanced_results) - 3} more results")
+                
+            return enhanced_results
+            
+        except Exception as e:
+            self.logger.error(f"Enhanced hybrid search failed for query '{query}': {e}")
+            # Fall back to original simple hybrid search if enhanced version fails
+            self.logger.warning("Falling back to basic hybrid search")
+            return self._basic_hybrid_search(query, limit)
+    
+    def _basic_hybrid_search(self, query: str, limit: int = 20) -> List[MemorySearchResult]:
+        """
+        Fallback basic hybrid search implementation (original logic).
+        
+        Args:
+            query: Search query string
+            limit: Maximum number of results
+            
+        Returns:
+            List of MemorySearchResult objects from basic hybrid search
         """
         try:
             # Get results from both search methods
@@ -487,32 +539,18 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
                                 combined_result.relevance_score + 0.2
                             )
                             combined_result.match_type = "hybrid"
-                            # Combine matched fields
-                            if hasattr(combined_result, 'matched_fields') and hasattr(result, 'matched_fields'):
-                                combined_result.matched_fields = list(set(
-                                    combined_result.matched_fields + result.matched_fields
-                                ))
                             break
             
             # Sort by relevance score (descending) and limit results
             combined_results.sort(key=lambda x: x.relevance_score, reverse=True)
             combined_results = combined_results[:limit]
             
-            # Log detailed result information
-            self.logger.info(f"Hybrid search '{query}' returned {len(combined_results)} results")
-            for i, result in enumerate(combined_results[:5]):  # Log first 5 results for debugging
-                self.logger.info(f"  {i+1}. Memory ID: {result.memory.id}, "
-                                f"Source: {result.match_type}, "
-                                f"Score: {result.relevance_score:.3f}, "
-                                f"Title: '{result.memory.title}'")
-            
-            if len(combined_results) > 5:
-                self.logger.debug(f"  ... and {len(combined_results) - 5} more results")
+            self.logger.info(f"Basic hybrid search returned {len(combined_results)} results")
             return combined_results
             
         except Exception as e:
-            self.logger.error(f"Hybrid search failed for query '{query}': {e}")
-            raise RepositoryError(f"Hybrid search operation failed: {e}")
+            self.logger.error(f"Basic hybrid search failed: {e}")
+            raise RepositoryError(f"Fallback hybrid search failed: {e}")
     
     def get_vector_store_stats(self) -> Dict[str, Any]:
         """Get vector store statistics."""

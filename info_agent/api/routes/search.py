@@ -59,7 +59,8 @@ def search_memories():
                 "title": result.title,
                 "snippet": result.snippet,
                 "relevance_score": round(result.relevance_score, 3) if result.relevance_score else None,
-                "match_type": getattr(result, 'search_type', 'hybrid')
+                "match_type": getattr(result, 'match_type', 'hybrid'),
+                "ranking_explanation": getattr(result, 'ranking_explanation', '')
             }
             results_list.append(result_dict)
         

@@ -729,16 +729,35 @@ class InfoAgent {
         const categories = memory.dynamic_fields?.categories || memory.dynamic_fields?.category ? 
             [memory.dynamic_fields.category] : [];
         
+        // Show ranking explanation if this is a search result and explanation exists
+        const showRankingInfo = this.searchQuery && memory.ranking_explanation;
+        
         return `
             <div class="memory-card" onclick="app.viewMemoryDetails(${memory.id})">
                 <div class="memory-header">
                     <h3 class="memory-title">${this.escapeHtml(memory.title)}</h3>
-                    <span class="memory-id">#${memory.id}</span>
+                    <div class="memory-header-right">
+                        <span class="memory-id">#${memory.id}</span>
+                        ${showRankingInfo && memory.relevance_score ? `
+                            <span class="memory-score" title="Relevance Score">
+                                ${(memory.relevance_score * 100).toFixed(0)}%
+                            </span>
+                        ` : ''}
+                    </div>
                 </div>
                 
                 <div class="memory-content">
                     ${this.escapeHtml(memory.content)}
                 </div>
+                
+                ${showRankingInfo ? `
+                    <div class="memory-ranking-info">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="ranking-explanation">${this.escapeHtml(memory.ranking_explanation)}</span>
+                    </div>
+                ` : ''}
                 
                 <div class="memory-meta">
                     <span class="memory-date">
@@ -750,6 +769,9 @@ class InfoAgent {
                     
                     <div class="memory-stats">
                         <span>${memory.word_count} words</span>
+                        ${showRankingInfo && memory.match_type ? `
+                            <span class="match-type" title="Search Method">${memory.match_type}</span>
+                        ` : ''}
                     </div>
                 </div>
                 
@@ -877,7 +899,9 @@ class InfoAgent {
                     created_at: new Date().toISOString(), // Placeholder
                     word_count: result.snippet.split(' ').length,
                     dynamic_fields: {},
-                    relevance_score: result.relevance_score // Keep relevance score for debugging
+                    relevance_score: result.relevance_score, // Keep relevance score for debugging
+                    match_type: result.match_type || 'hybrid',
+                    ranking_explanation: result.ranking_explanation || ''
                 }));
                 
                 console.log(`Search for "${query}": ${data.data.results.length} total, ${filteredResults.length} relevant (score > 0.3)`);

@@ -15,13 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 def format_memory_result(result) -> Dict[str, Any]:
-    """Format a MemorySearchResult for tool output"""
+    """Format a MemorySearchResult for tool output with ranking transparency"""
     return {
         "memory_id": result.memory.id,
         "title": result.memory.title,
         "content": result.memory.content,
         "relevance_score": getattr(result, 'relevance_score', 1.0),
         "match_type": getattr(result, 'match_type', 'unknown'),
+        "ranking_explanation": getattr(result, 'ranking_explanation', ''),
         "created_date": result.memory.created_at.isoformat() if hasattr(result.memory, 'created_at') and result.memory.created_at else None,
         "dynamic_fields": result.memory.dynamic_fields or {}
     }

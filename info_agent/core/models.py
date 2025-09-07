@@ -249,13 +249,14 @@ class Memory:
 @dataclass
 class MemorySearchResult:
     """
-    Represents a search result with relevance scoring.
+    Represents a search result with relevance scoring and ranking transparency.
     """
     memory: Memory
     relevance_score: float = 0.0
-    match_type: str = "unknown"  # "fts", "semantic", "hybrid"
+    match_type: str = "unknown"  # "fts", "semantic", "hybrid", "rrf_fused", etc.
     matched_fields: List[str] = field(default_factory=list)
     snippet: str = ""  # Content preview/snippet
+    ranking_explanation: str = ""  # Explanation of why this result was ranked highly
     
     @property
     def memory_id(self) -> int:
