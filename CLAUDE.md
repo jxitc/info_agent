@@ -20,7 +20,28 @@ See ./requirements.md for more detail about this running project
 
 ## Development Commands
 
+### Main InfoAgent Server
 Since this appears to be an early-stage project without established build tools, development commands will need to be established as the implementation progresses. Update this section once package management and build systems are in place.
+
+### Android Client
+For Android client development in `android_client/InfoAgent/`:
+
+**Build Android APK:**
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" && cd android_client/InfoAgent && ./gradlew assembleDebug
+```
+
+**Run Android Tests:**
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" && cd android_client/InfoAgent && ./gradlew test
+```
+
+**Clean Android Build:**
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" && cd android_client/InfoAgent && ./gradlew clean
+```
+
+**Note**: Uses Android Studio's bundled JetBrains Runtime (JBR) for Java compatibility. The JAVA_HOME path points to Android Studio's internal JDK to ensure consistent builds with the IDE.
 
 ## Key Implementation Notes
 
