@@ -14,7 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jxitc.infoagent.presentation.screen.AddMemoryScreen
-import com.jxitc.infoagent.presentation.screen.HomeScreen
+import com.jxitc.infoagent.presentation.screen.MemoryListScreen
 import com.jxitc.infoagent.ui.theme.InfoAgentTheme
 
 class MainActivity : ComponentActivity() {
@@ -41,11 +41,13 @@ fun InfoAgentApp(appContainer: com.jxitc.infoagent.di.AppContainer) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = "memory_list",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home") {
-                HomeScreen(
+            composable("memory_list") {
+                val viewModel = remember { appContainer.createMemoryListViewModel() }
+                MemoryListScreen(
+                    viewModel = viewModel,
                     onNavigateToAddMemory = {
                         navController.navigate("add_memory")
                     }

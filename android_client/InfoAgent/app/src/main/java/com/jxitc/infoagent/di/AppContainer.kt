@@ -7,6 +7,7 @@ import com.jxitc.infoagent.domain.repository.MemoryRepository
 import com.jxitc.infoagent.domain.usecase.CreateMemoryUseCase
 import com.jxitc.infoagent.domain.usecase.GetMemoriesUseCase
 import com.jxitc.infoagent.presentation.viewmodel.AddMemoryViewModel
+import com.jxitc.infoagent.presentation.viewmodel.MemoryListViewModel
 
 class AppContainer(private val context: Context) {
     
@@ -28,5 +29,9 @@ class AppContainer(private val context: Context) {
     
     fun createAddMemoryViewModel(): AddMemoryViewModel {
         return AddMemoryViewModel(createMemoryUseCase)
+    }
+    
+    fun createMemoryListViewModel(): MemoryListViewModel {
+        return MemoryListViewModel(getMemoriesUseCase)
     }
 }
