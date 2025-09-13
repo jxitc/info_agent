@@ -132,8 +132,8 @@ class SQLiteMemoryRepository(MemoryRepositoryInterface):
             if memory.content_hash:
                 existing = self.db.get_memory_by_hash(memory.content_hash)
                 if existing:
-                    self.logger.warning(f"Duplicate memory detected: {memory.content_hash}")
-                    raise RepositoryError(f"Memory with this content already exists (ID: {existing.id})")
+                    self.logger.info(f"Duplicate memory detected: {memory.content_hash}, returning existing memory (ID: {existing.id})")
+                    return existing
             
             created_memory = self.db.create_memory(memory)
             
