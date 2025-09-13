@@ -6,6 +6,7 @@ import com.jxitc.infoagent.data.repository.MemoryRepositoryImpl
 import com.jxitc.infoagent.domain.repository.MemoryRepository
 import com.jxitc.infoagent.domain.usecase.CreateMemoryUseCase
 import com.jxitc.infoagent.domain.usecase.GetMemoriesUseCase
+import com.jxitc.infoagent.domain.service.MemorySyncService
 import com.jxitc.infoagent.data.local.AppPreferences
 import com.jxitc.infoagent.data.remote.InfoAgentApiClient
 import com.jxitc.infoagent.presentation.viewmodel.AddMemoryViewModel
@@ -38,12 +39,16 @@ class AppContainer(private val context: Context) {
         GetMemoriesUseCase(memoryRepository)
     }
     
+    val syncService by lazy {
+        MemorySyncService(memoryRepository, apiClient, appPreferences)
+    }
+    
     fun createAddMemoryViewModel(): AddMemoryViewModel {
-        return AddMemoryViewModel(createMemoryUseCase, apiClient, appPreferences)
+        return AddMemoryViewModel(createMemoryUseCase, apiClient, appPreferences, memoryRepository)
     }
     
     fun createMemoryListViewModel(): MemoryListViewModel {
-        return MemoryListViewModel(getMemoriesUseCase)
+        return MemoryListViewModel(getMemoriesUseCase, syncService)
     }
     
     fun createSettingsViewModel(): SettingsViewModel {
