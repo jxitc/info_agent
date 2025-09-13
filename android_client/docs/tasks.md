@@ -29,12 +29,12 @@ This document breaks down the Android client development into concrete, independ
 
 ## 1. Core Infrastructure
 
-### 1.1 Local Database Layer
-- [ ] 1.1.1 Design Room database schema for cached memories
-- [ ] 1.1.2 Create Entity classes for Memory, Settings, and Queue items
-- [ ] 1.1.3 Implement DAO interfaces for database operations
+### 1.1 Local Database Layer ✅ **MOSTLY COMPLETED**
+- [x] 1.1.1 Design Room database schema for cached memories
+- [x] 1.1.2 Create Entity classes for Memory, Settings, and Queue items
+- [x] 1.1.3 Implement DAO interfaces for database operations
 - [ ] 1.1.4 Add database migrations and version management
-- [ ] 1.1.5 Create Repository abstraction layer over Room
+- [x] 1.1.5 Create Repository abstraction layer over Room
 
 ### 1.2 Network Layer Foundation
 - [ ] 1.2.1 Design InfoAgent API client interface
@@ -44,12 +44,8 @@ This document breaks down the Android client development into concrete, independ
 - [ ] 1.2.5 Implement retry logic with exponential backoff
 - [ ] 1.2.6 Add request/response logging for debugging
 
-### 1.3 Security & Encryption
-- [ ] 1.3.1 Implement Android Keystore integration
-- [ ] 1.3.2 Create encryption utilities for local data
-- [ ] 1.3.3 Add certificate pinning for server communication
-- [ ] 1.3.4 Implement secure token storage
-- [ ] 1.3.5 Create data sanitization utilities
+### 1.3 Security & Encryption **[MOVED TO PHASE 7 - NOT NEEDED FOR MVP]**
+- [ ] MOVED: All security tasks moved to Section 11 (Security & Compliance)
 
 ## 2. Basic UI & Settings
 
@@ -75,6 +71,14 @@ This document breaks down the Android client development into concrete, independ
 - [ ] 2.3.5 Create backup and restore settings functionality
 
 ## 3. Data Collection - Phase 1 (MVP)
+
+### 3.0 Manual Memory Input **[HIGH PRIORITY - MVP FOUNDATION]**
+- [ ] 3.0.1 Create simple "Add Memory" UI screen with text input
+- [ ] 3.0.2 Implement basic memory creation form (title + content)
+- [ ] 3.0.3 Add memory submission to local database
+- [ ] 3.0.4 Create memory list view to display saved memories
+- [ ] 3.0.5 Add InfoAgent server API integration for manual submissions
+- [ ] 3.0.6 Test end-to-end manual memory creation workflow
 
 ### 3.1 SMS Monitoring
 - [ ] 3.1.1 Request SMS permissions with proper explanation
@@ -317,7 +321,7 @@ Complete in order: 0.1 → 0.2 → 0.3
 Can work in parallel: 1.1, 1.2, 1.3 and 2.1, 2.2, 2.3
 
 ### Phase 2: MVP Data Collection (After Phase 1)
-Complete in order: 3.1 → 3.2 → 3.3 → 4.1 → 4.2 → 4.3
+Complete in order: 3.0 → 3.1 → 3.2 → 3.3 → 4.1 → 4.2 → 4.3
 
 ### Phase 3: Background Processing (After Phase 2)
 Complete in order: 5.1 → 5.2 → 5.3
@@ -336,7 +340,7 @@ Complete in order: 11.1 → 11.2 → 11.3 → 12.1 → 12.2 → 12.3
 
 ## Current Status: Phase 0 Complete ✅
 **Phase 0 Completed**: Project foundation with Clean Architecture, Room database, manual DI, and build system  
-**Next Action**: Begin Phase 1 - Core Infrastructure (Local Database Layer)
+**Next Action**: Begin Phase 2 - Manual Memory Input (3.0) - Create basic UI for manual text submission
 
 ---
 
