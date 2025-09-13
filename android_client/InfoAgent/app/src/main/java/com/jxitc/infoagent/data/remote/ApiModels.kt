@@ -16,8 +16,8 @@ data class CreateMemoryRequest(
 
 // Response models
 data class ApiResponse<T>(
-    @SerializedName("status")
-    val status: String,
+    @SerializedName("success")
+    val success: Boolean,
     @SerializedName("message")
     val message: String? = null,
     @SerializedName("data")
@@ -80,7 +80,7 @@ fun MemoryApiResponse.toDomainModel(): Memory {
         title = title,
         content = content,
         sourceType = SourceType.MANUAL, // Server memories are considered manual for now
-        metadata = dynamicFields?.mapValues { it.value.toString() } ?: emptyMap(),
+        metadata = dynamicFields?.mapValues { it.value?.toString() ?: "" } ?: emptyMap(),
         createdAt = createdAtParsed,
         updatedAt = updatedAtParsed,
         isUploaded = true, // Already on server

@@ -55,7 +55,7 @@ class InfoAgentApiClient(
                 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    if (body?.status == "success" && body.data != null) {
+                    if (body?.success == true && body.data != null) {
                         val memory = body.data.toDomainModel()
                         Logger.i("Memory created on server: ID ${memory.id}")
                         ProcessingResult.Success(memory)
@@ -87,7 +87,7 @@ class InfoAgentApiClient(
                 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    if (body?.status == "success" && body.data != null) {
+                    if (body?.success == true && body.data != null) {
                         val memories = body.data.memories.map { it.toDomainModel() }
                         Logger.i("Fetched ${memories.size} memories from server")
                         ProcessingResult.Success(memories)

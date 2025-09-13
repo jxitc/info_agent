@@ -28,10 +28,14 @@ class MemoryRepositoryImpl(
                 uploadRetryCount = 0
             )
             
+            android.util.Log.d("MemoryRepo", "Creating memory with title: '${memory.title}'")
             val id = memoryDao.insertMemory(memory.toEntity())
+            android.util.Log.d("MemoryRepo", "Memory created with ID: $id")
+            
             val savedMemory = memory.copy(id = id)
             ProcessingResult.Success(savedMemory)
         } catch (e: Exception) {
+            android.util.Log.e("MemoryRepo", "Failed to create memory", e)
             ProcessingResult.Error("Failed to create memory", e)
         }
     }
@@ -57,7 +61,12 @@ class MemoryRepositoryImpl(
     
     override suspend fun getRecentMemories(limit: Int): Flow<List<Memory>> {
         return memoryDao.getRecentMemories(limit).map { entities ->
-            entities.map { it.toDomainModel() }
+            val memories = entities.map { it.toDomainModel() }
+            android.util.Log.d("MemoryRepo", "getRecentMemories: Found ${memories.size} memories")
+            memories.forEachIndexed { index, memory ->
+                android.util.Log.d("MemoryRepo", "Memory ${index + 1}: ID=${memory.id}, title='${memory.title}', isUploaded=${memory.isUploaded}")
+            }
+            memories
         }
     }
     
@@ -72,9 +81,19 @@ class MemoryRepositoryImpl(
     
     override suspend fun updateMemoryUploadStatus(id: Long, isUploaded: Boolean): ProcessingResult<Unit> {
         return try {
+            // Debug: Check current state before update
+            val beforeUpdate = memoryDao.getMemoryById(id)
+            android.util.Log.d("MemoryRepo", "BEFORE UPDATE: Memory ID $id, isUploaded = ${beforeUpdate?.isUploaded}")
+            
             memoryDao.updateUploadStatus(id, isUploaded)
+            
+            // Debug: Check state after update  
+            val afterUpdate = memoryDao.getMemoryById(id)
+            android.util.Log.d("MemoryRepo", "AFTER UPDATE: Memory ID $id, isUploaded = ${afterUpdate?.isUploaded}")
+            
             ProcessingResult.Success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("MemoryRepo", "Failed to update upload status for ID $id", e)
             ProcessingResult.Error("Failed to update upload status", e)
         }
     }
