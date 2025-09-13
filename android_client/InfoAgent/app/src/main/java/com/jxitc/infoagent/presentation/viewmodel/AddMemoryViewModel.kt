@@ -1,7 +1,10 @@
 package com.jxitc.infoagent.presentation.viewmodel
 
 import androidx.lifecycle.viewModelScope
+import com.jxitc.infoagent.data.local.AppPreferences
+import com.jxitc.infoagent.data.remote.InfoAgentApiClient
 import com.jxitc.infoagent.domain.model.MemoryCreationRequest
+import com.jxitc.infoagent.domain.model.ProcessingResult
 import com.jxitc.infoagent.domain.model.SourceType
 import com.jxitc.infoagent.domain.usecase.CreateMemoryUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,7 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AddMemoryViewModel(
-    private val createMemoryUseCase: CreateMemoryUseCase
+    private val createMemoryUseCase: CreateMemoryUseCase,
+    private val apiClient: InfoAgentApiClient,
+    private val appPreferences: AppPreferences
 ) : BaseViewModel() {
     
     private val _content = MutableStateFlow("")
@@ -38,6 +43,45 @@ class AddMemoryViewModel(
             metadata = mapOf("input_method" to "manual_text_input")
         )
         
+        // Try server first if auto-sync is enabled, then fall back to local
+        if (appPreferences.autoSync) {
+            submitToServerWithFallback(request)
+        } else {
+            submitToLocalOnly(request)
+        }
+    }
+    
+    private fun submitToServerWithFallback(request: MemoryCreationRequest) {
+        launchWithLoading(
+            block = { 
+                // Try server first
+                when (val serverResult = apiClient.createMemory(request)) {
+                    is ProcessingResult.Success -> {
+                        // Server success - also save locally for offline access
+                        val localMemory = serverResult.data.copy(isUploaded = true)
+                        val localRequest = MemoryCreationRequest(
+                            content = localMemory.content,
+                            sourceType = localMemory.sourceType,
+                            metadata = localMemory.metadata
+                        )
+                        createMemoryUseCase.execute(localRequest) // Save locally but ignore result
+                        serverResult // Return server result
+                    }
+                    is ProcessingResult.Error -> {
+                        // Server failed - save locally for later sync
+                        createMemoryUseCase.execute(request)
+                    }
+                    ProcessingResult.Loading -> ProcessingResult.Loading
+                }
+            },
+            onSuccess = { memory ->
+                _isSubmitted.value = true
+                _content.value = ""
+            }
+        )
+    }
+    
+    private fun submitToLocalOnly(request: MemoryCreationRequest) {
         launchWithLoading(
             block = { createMemoryUseCase.execute(request) },
             onSuccess = { memory ->

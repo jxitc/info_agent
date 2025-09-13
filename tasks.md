@@ -211,6 +211,17 @@ This document breaks down the M0 prototype development into concrete, independen
 - [ ] 10.2.5 Set up web server configuration
 - [ ] 10.2.6 Create deployment scripts
 
+### 10.3 Production Security & HTTPS **[CRITICAL FOR MOBILE CLIENTS]**
+- [ ] 10.3.1 **HTTPS/TLS Setup**: Configure SSL certificates for production server (required for Android client)
+- [ ] 10.3.2 **Domain Configuration**: Set up proper domain name with valid SSL certificate
+- [ ] 10.3.3 **Android Network Policy**: Remove development HTTP allowlist from mobile client
+- [ ] 10.3.4 **Certificate Validation**: Implement proper certificate pinning for mobile security
+- [ ] 10.3.5 **Environment Configuration**: Separate development (HTTP) vs production (HTTPS) configs
+- [ ] 10.3.6 **Load Balancer/Proxy**: Set up nginx/Apache with SSL termination for production deployment
+
+**IMPORTANT**: Android requires HTTPS for production apps. Current development setup uses HTTP allowlist 
+which is NOT suitable for production. Mobile clients will fail in production without proper HTTPS setup.
+
 ## 11. MCP & Agent Foundation **[NEW - HIGH PRIORITY]**
 
 ### 11.1 Direct Tool Integration (Simplified from MCP)

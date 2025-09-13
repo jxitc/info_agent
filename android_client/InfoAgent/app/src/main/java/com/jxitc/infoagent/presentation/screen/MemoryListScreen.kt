@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +25,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun MemoryListScreen(
     viewModel: MemoryListViewModel,
-    onNavigateToAddMemory: () -> Unit = {}
+    onNavigateToAddMemory: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -42,6 +44,12 @@ fun MemoryListScreen(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh"
+                    )
+                }
+                IconButton(onClick = onNavigateToSettings) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings"
                     )
                 }
                 IconButton(onClick = onNavigateToAddMemory) {

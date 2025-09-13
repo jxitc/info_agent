@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jxitc.infoagent.presentation.screen.AddMemoryScreen
 import com.jxitc.infoagent.presentation.screen.MemoryListScreen
+import com.jxitc.infoagent.presentation.screen.SettingsScreen
 import com.jxitc.infoagent.ui.theme.InfoAgentTheme
 
 class MainActivity : ComponentActivity() {
@@ -50,6 +51,9 @@ fun InfoAgentApp(appContainer: com.jxitc.infoagent.di.AppContainer) {
                     viewModel = viewModel,
                     onNavigateToAddMemory = {
                         navController.navigate("add_memory")
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate("settings")
                     }
                 )
             }
@@ -57,6 +61,16 @@ fun InfoAgentApp(appContainer: com.jxitc.infoagent.di.AppContainer) {
             composable("add_memory") {
                 val viewModel = remember { appContainer.createAddMemoryViewModel() }
                 AddMemoryScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            
+            composable("settings") {
+                val viewModel = remember { appContainer.createSettingsViewModel() }
+                SettingsScreen(
                     viewModel = viewModel,
                     onNavigateBack = {
                         navController.popBackStack()
